@@ -13,25 +13,25 @@
       364592808;01.05.2022 00:00:15;8005;Status Kessel;25;
       364593010;01.05.2022 00:00:15;8314;Kesselrücklauftemperatur Ist;66.7;°C
       [...]
-      to alleviate d3+c3 performance issues when dealing with
+      to alleviate d3+bb performance issues when dealing with
       large datasets, we (allow to) filter those datasets
-      for d3+c3 by using a date range a...b:
+      for d3+bb by using a date range a...b:
     -->
     <input type='date' onchange='g()'> <!-- a -->
     <output></output>                  <!-- i ('...') -->
     <input type='date' onchange='g()'> <!-- b -->
-    <div id='c3'></div>
+    <div id='bb'></div>
     <style>
-      svg,.c3-tooltip{font:10px sans-serif}
+      svg,.bb-tooltip{font:10px sans-serif}
       div path,line{fill:none;stroke:#000}
-      .c3-focused{opacity:1;stroke-width:2px}
-      .c3-defocused,.c3-legend-item-hidden{opacity:0.2 !important}
-      .c3-tooltip{opacity:0.5;background-color:#eee}
-      .c3-tooltip th{background-color:#ccc}
-      .c3-tooltip .value{text-align:right}
+      .bb-focused{opacity:1;stroke-width:2px}
+      .bb-defocused,.bb-legend-item-hidden{opacity:0.2 !important}
+      .bb-tooltip{opacity:0.5;background-color:#eee}
+      .bb-tooltip th{background-color:#ccc}
+      .bb-tooltip .value{text-align:right}
     </style>
-    <script src='https://d3js.org/d3.v4.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/c3'></script>
+    <script src='https://d3js.org/d3.v7.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/billboard.js'></script>
     <script>
       let t,d=document,
           [f,a,b]=d.querySelectorAll('input'),
@@ -72,8 +72,8 @@
         o.push(r);
         // plot:
         let f='%Y-%m-%d %H:%M';
-        let c=c3.generate({
-          bindto:'#c3',
+        let c=bb.generate({
+          bindto:'#bb',
           data:{
             json:o,
             keys:{x:'t',value:Object.keys(p)},

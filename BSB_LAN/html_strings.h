@@ -71,26 +71,26 @@ const char graph_html[] PROGMEM_LATE =
   // 364592808;01.05.2022 00:00:15;8005;Status Kessel;25;
   // 364593010;01.05.2022 00:00:15;8314;Kesselrücklauftemperatur Ist;66.7;°C
   // [...]
-  // to alleviate d3+c3 performance issues when dealing with large datasets, we (allow to) filter those datasets
-  // for d3+c3 by using a date range a-b (on start-up: DEFAULT_DAYS_TO_PLOT days back from current date only):
+  // to alleviate d3+bb performance issues when dealing with large datasets, we (allow to) filter those datasets
+  // for d3+bb by using a date range a-b (on start-up: DEFAULT_DAYS_TO_PLOT days back from current date only):
   "<a href>" MENU_TEXT_DDO "</a> " NEWLINE // link to download displayed data a-b (set in code below)
   "<input type='date' onchange='f()'>" NEWLINE // a
   "<output></output>" NEWLINE                  // i ('! - !')
   "<input type='date' onchange='f()'>" NEWLINE // b
   "</td></tr></tbody></table>" NEWLINE // close table opened by surrounding html to escape its width limitation
-  "<div id='c3'></div>" NEWLINE
+  "<div id='bb'></div>" NEWLINE
   "<style>" NEWLINE
     "input{width:auto;text-align:right}" NEWLINE // the preceding html has set width=100% :/
-    "svg,.c3-tooltip{font:10px sans-serif}" NEWLINE
+    "svg,.bb-tooltip{font:10px sans-serif}" NEWLINE
     "div path,line{fill:none;stroke:#000}" NEWLINE
-    ".c3-focused{opacity:1;stroke-width:2px}" NEWLINE
-    ".c3-defocused,.c3-legend-item-hidden{opacity:0.2 !important}" NEWLINE
-    ".c3-tooltip{opacity:0.5;background-color:#eee}" NEWLINE
-    ".c3-tooltip th{background-color:#ccc}" NEWLINE
-    ".c3-tooltip .value{text-align:right}" NEWLINE
+    ".bb-focused{opacity:1;stroke-width:2px}" NEWLINE
+    ".bb-defocused,.bb-legend-item-hidden{opacity:0.2 !important}" NEWLINE
+    ".bb-tooltip{opacity:0.5;background-color:#eee}" NEWLINE
+    ".bb-tooltip th{background-color:#ccc}" NEWLINE
+    ".bb-tooltip .value{text-align:right}" NEWLINE
   "</style>" NEWLINE
-  "<script src='https://d3js.org/d3.v4.min.js'></script>" NEWLINE
-  "<script src='https://cdn.jsdelivr.net/npm/c3'></script>" NEWLINE
+  "<script src='https://d3js.org/d3.v7.min.js'></script>" NEWLINE
+  "<script src='https://cdn.jsdelivr.net/npm/billboard.js'></script>" NEWLINE
   "<script>" NEWLINE
     "let al='x',bl," NEWLINE // al..bl = data range a..b loaded (i.e. already in RAM)
         "t,h,d=document,l=d.links," NEWLINE // t=datalog text contents, h=href for /Da,b
@@ -149,8 +149,8 @@ const char graph_html[] PROGMEM_LATE =
       "});" NEWLINE
       "o.push(r);" NEWLINE
       // plot:
-      "c=c3.generate({" NEWLINE
-        "bindto:'#c3'," NEWLINE
+      "c=bb.generate({" NEWLINE
+        "bindto:'#bb'," NEWLINE
         "data:{" NEWLINE
           "json:o," NEWLINE
           "keys:{x:'t',value:Object.keys(p)}," NEWLINE

@@ -82,10 +82,10 @@ const char graph_html[] PROGMEM_LATE =
   "<style>" NEWLINE
     "input{width:auto;text-align:right}" NEWLINE // the preceding html has set width=100% :/
     "svg,.bb-tooltip{font:10px sans-serif}" NEWLINE
-    "div path,line{fill:none;stroke:#000}" NEWLINE
+    "div path,line{fill:none;stroke:#aaa}" NEWLINE
     ".bb-focused{opacity:1;stroke-width:2px}" NEWLINE
-    ".bb-defocused,.bb-legend-item-hidden{opacity:0.2 !important}" NEWLINE
-    ".bb-tooltip{opacity:0.5;background-color:#eee}" NEWLINE
+    ".bb-defocused,.bb-legend-item-hidden{opacity:0.5 !important}" NEWLINE
+    ".bb-tooltip{opacity:0.7;background-color:#eee}" NEWLINE
     ".bb-tooltip th{background-color:#ccc}" NEWLINE
     ".bb-tooltip .value{text-align:right}" NEWLINE
   "</style>" NEWLINE

@@ -86,8 +86,8 @@ const char graph_html[] PROGMEM_LATE =
     ".bb-focused{opacity:1;stroke-width:2px}" NEWLINE
     ".bb-defocused,.bb-legend-item-hidden{opacity:0.5 !important}" NEWLINE
     ".bb-tooltip{opacity:0.7;background-color:#eee}" NEWLINE
-    ".bb-tooltip th{background-color:#ccc}" NEWLINE
-    ".bb-tooltip .value{text-align:right}" NEWLINE
+    "th{background-color:#ccc}" NEWLINE
+    ".value{text-align:right}" NEWLINE
   "</style>" NEWLINE
   "<script src='https://d3js.org/d3.v7.min.js'></script>" NEWLINE
   "<script src='https://cdn.jsdelivr.net/npm/billboard.js'></script>" NEWLINE

@@ -23,9 +23,10 @@ Milliseconds;Date;Parameter;Description;Value;Unit
 1235887155;16.11.2024 15:42:23;8774;Vorlauftemperatur-Sollwert resultierend HK2;29.6;°C
 ```
 
-... to this (CSV format example; uncomment `df.to_csv([...]` line to save the pivoted
-data in this format for processing with another program, or use `df.to_pickle` if you
-want to load the transformed data again with Python later on):
+... to this (CSV format example; uncomment `df.to_csv([...]` line to save the
+pivoted data in this format for processing with another program, or use
+`df.to_pickle` if you want to load the transformed data again with Python
+later on):
 
 ```
 Date,8700 - Aussentemperatur [°C],8770 - Raumtemperatur-Istwert 2 [°C],8773 - Vorlauftemperatur Istwert Heizkreis 2 [°C],8774 - Vorlauftemperatur-Sollwert resultierend HK2 [°C],1020 - Heizkennlinien-Steilheit
@@ -38,7 +39,8 @@ Date,8700 - Aussentemperatur [°C],8770 - Raumtemperatur-Istwert 2 [°C],8773 - 
 The provided Python script also includes some examples on how the data could be
 processed/analyzed. To see them applied to your data, just execute the script!
 For that, you can either provide the names of files containing BSB-LAN /D
-datalogs or the script will try to load it directly from `http://bsb-lan/D`.
+datalogs or the script will try to load the current data directly from
+`http://bsb-lan/D`.
 
 ### Statistical overview
 

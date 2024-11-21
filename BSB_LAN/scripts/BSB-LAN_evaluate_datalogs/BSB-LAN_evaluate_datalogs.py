@@ -71,9 +71,9 @@ plt.tight_layout()
 plt.show()
 
 # plot of temperature parameters, similar to BSB-LAN's /DG:
-# Date values will usually differ within each BSB-LAN sample set,
-# as BSB-LAN most often cannot query multiple parameters within the same second.
-# Therefore we fill the resulting "gaps" in our data, for uninterrupted plot lines:
+# Date values can differ within each BSB-LAN sample set, # as BSB-LAN often
+# cannot query multiple parameters within the same second. Therefore we fill
+# the resulting "gaps" in our data, for uninterrupted plot lines:
 df.fillna(method="ffill").plot(
     x="Date", y=find_parameter_columns(df, "°"), grid=True, figsize=(19.2, 10.8)
 )

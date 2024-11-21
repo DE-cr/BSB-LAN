@@ -37,8 +37,8 @@ Date,8700 - Aussentemperatur [°C],8770 - Raumtemperatur-Istwert 2 [°C],8773 - 
 
 The provided Python script also includes some examples on how the data could be
 processed/analyzed. To see them applied to your data, just execute the script!
-For that, you can either provide the names of files containing BSB-LAN /D datalogs;
-if you don't the script will try to load it directly from `http://bsb-lan/D`.
+For that, you can either provide the names of files containing BSB-LAN /D
+datalogs or the script will try to load it directly from `http://bsb-lan/D`.
 
 ### Statistical overview
 

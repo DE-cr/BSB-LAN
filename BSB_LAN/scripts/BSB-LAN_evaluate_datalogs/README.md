@@ -58,8 +58,9 @@ names, the boxplots become a bit squashed here.)
 
 ### If you have data spanning multiple years (or at least months)
 
-As you can see in the "calendar" views below, I had data for some months in
-multiple years available.
+![BoxPlotYearMont](examples/BSB-LAN_evaluate_datalogs.py_boxplot_year_month.png)
+
+---
 
 ![FlowOverTemp](examples/BSB-LAN_evaluate_datalogs.py_flow_over_outside.png)
 

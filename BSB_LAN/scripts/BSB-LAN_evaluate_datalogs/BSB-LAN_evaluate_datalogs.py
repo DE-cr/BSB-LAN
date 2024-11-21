@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-#----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # sample code to show how BSB-LAN's /D datalogs could be processed using
 # pandas/python, including conversion to pivoted *.csv and some plot ideas
-#----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 from sys import argv
 import pandas as pd
@@ -91,10 +91,16 @@ df["month"] = df.Date.dt.month
 df["day"] = df.Date.dt.day
 df["time"] = df.Date.dt.hour + (df.Date.dt.minute + df.Date.dt.second / 60) / 60
 
-# plot flow temperature set point over outside temperature, by year:
 outside_temperature_column = find_parameter_columns(df, 8700)[0]
 # note: we're using heating circuit 2 (parameter 8774) here!:
 flow_temperature_set_point_column = find_parameter_columns(df, 8774)[0]
+
+# plot temperature boxplot per year/month:
+df.boxplot(outside_temperature_column, ["year", "month"], showmeans=True, rot=90)
+plt.tight_layout()
+plt.show()
+
+# plot flow temperature set point over outside temperature, by year:
 for year in df.year.unique():
     dfx = df.query(f"year=={year}")
     plt.scatter(

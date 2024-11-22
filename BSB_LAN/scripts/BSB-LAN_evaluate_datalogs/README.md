@@ -78,4 +78,7 @@ names, the boxplots become a bit squashed here.)
 
 ---
 
+Why a night time room temperature reduction, combined with start forward shift,
+may not be the best choice when using a heat pump:
+
 ![FlowOverTime](examples/BSB-LAN_evaluate_datalogs.py_cal_8774_-_Vorlauftemperatur-Sollwert_resultierend_[°C]_over_time.png)

@@ -65,6 +65,11 @@ def find_parameter_columns(df, parameter_name_contains):
     return [c for c in df.columns if str(parameter_name_contains) in c]
 
 
+# locate some parameter columns we're using:
+outside_temperature_column = find_parameter_columns(df, 8700)[0]
+# note: we're using heating circuit 2 (parameter 8774) here!:
+flow_temperature_set_point_column = find_parameter_columns(df, 8774)[0]
+
 # graphically show statistics for numeric data fields found:
 df.boxplot(showmeans=True, rot=90)
 plt.tight_layout()
@@ -80,6 +85,18 @@ df.fillna(method="ffill").plot(
 plt.tight_layout()
 plt.show()
 
+# plotting rolling averages of outside temperatures:
+dfx = df.set_index("Date")  # for proper handling as x axis in plots
+dfx["daily"] = dfx[outside_temperature_column].rolling("D").mean()
+dfx["weekly"] = dfx[outside_temperature_column].rolling("7D").mean()
+dfx["monthly"] = dfx[outside_temperature_column].rolling("30D").mean()
+dfx.plot(
+    y=["daily", "weekly", "monthly"],
+    title="Rolling averages of " + outside_temperature_column,
+)
+plt.tight_layout()
+plt.show()
+
 
 # - the following make sense mostly with data spanning multiple years:
 
@@ -90,10 +107,6 @@ df["year"] = df.Date.dt.year
 df["month"] = df.Date.dt.month
 df["day"] = df.Date.dt.day
 df["time"] = df.Date.dt.hour + (df.Date.dt.minute + df.Date.dt.second / 60) / 60
-
-outside_temperature_column = find_parameter_columns(df, 8700)[0]
-# note: we're using heating circuit 2 (parameter 8774) here!:
-flow_temperature_set_point_column = find_parameter_columns(df, 8774)[0]
 
 # plot temperature boxplot per year/month:
 df.boxplot(outside_temperature_column, ["year", "month"], showmeans=True, rot=90)

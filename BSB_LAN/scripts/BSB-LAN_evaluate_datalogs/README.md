@@ -59,6 +59,10 @@ names, the boxplots become a bit squashed here.)
 
 ![DG](examples/BSB-LAN_evaluate_datalogs.py_DG.png)
 
+... or maybe like this?:
+
+![RollingAverages](examples/BSB-LAN_evaluate_datalogs.py_outside_temp_rolling_averages.png)
+
 ### If you have data spanning multiple years (or at least months)
 
 

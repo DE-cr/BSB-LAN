@@ -142,3 +142,4 @@ def calendar_plot(df, x, y):
 
 calendar_plot(df, "time", outside_temperature_column)
 calendar_plot(df, "day", outside_temperature_column)
+calendar_plot(df, "time", flow_temperature_set_point_column)

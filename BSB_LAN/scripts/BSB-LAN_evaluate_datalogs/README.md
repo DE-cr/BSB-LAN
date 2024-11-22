@@ -42,6 +42,9 @@ For that, you can either provide the names of files containing BSB-LAN /D
 datalogs or the script will try to load the current data directly from
 `http://bsb-lan/D`.
 
+(For the "multiple years/months" plots (see below) you may have to adjust the Python
+script to use the parameters you're logging, which may differ from mine.)
+
 ### Statistical overview
 
 (Use `print(df.describe())` for a textual representation. Due to the long parameter
@@ -58,6 +61,7 @@ names, the boxplots become a bit squashed here.)
 
 ### If you have data spanning multiple years (or at least months)
 
+
 ![BoxPlotYearMont](examples/BSB-LAN_evaluate_datalogs.py_boxplot_year_month.png)
 
 ---
@@ -71,3 +75,7 @@ names, the boxplots become a bit squashed here.)
 ---
 
 ![TempOverDay](examples/BSB-LAN_evaluate_datalogs.py_cal_8700_-_Aussentemperatur_[°C]_over_day.png)
+
+---
+
+![FlowOverTime](examples/BSB-LAN_evaluate_datalogs.py_cal_8774_-_Vorlauftemperatur-Sollwert_resultierend_[°C]_over_time.png)

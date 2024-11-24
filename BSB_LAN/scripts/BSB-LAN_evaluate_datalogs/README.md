@@ -86,3 +86,15 @@ Why a night time room temperature reduction, combined with rapid warm-up and
 start forward shift, may not be the best choice when using a heat pump:
 
 ![FlowOverTime](examples/BSB-LAN_evaluate_datalogs.py_cal_8774_-_Vorlauftemperatur-Sollwert_resultierend_[°C]_over_time.png)
+
+---
+
+Should you have logged the burner status (parameter 8005) every minute for an
+extended period of time, you can also create something like this:
+
+![BurnerActivity](examples/BSB-LAN_evaluate_datalogs.py_burner_activity_bars.png)
+
+... and if you have also logged the outside temperatures with it, something
+like this:
+
+![BurnerActivityAndTemp](examples/BSB-LAN_evaluate_datalogs.py_burner_activity_plots.png)

@@ -103,6 +103,7 @@ plt.show()
 import calendar
 
 # infer detail columns from Date:
+df["date"] = df.Date.dt.data  # just the date, without time
 df["year"] = df.Date.dt.year
 df["month"] = df.Date.dt.month
 df["day"] = df.Date.dt.day
@@ -156,3 +157,57 @@ def calendar_plot(df, x, y):
 calendar_plot(df, "time", outside_temperature_column)
 calendar_plot(df, "day", outside_temperature_column)
 calendar_plot(df, "time", flow_temperature_set_point_column)
+
+
+# bar plot of burner activity hours by year/month:
+burner_status_column = find_parameter_columns(df, 8005)[0]
+samples_per_hour = 60
+
+ax = (  # burner status < 17 == active:
+    df[df[burner_status_column] < 17].groupby(["year", "month"]).year.count()
+    / samples_per_hour
+).plot(kind="bar", title="Burner Activity [h]", figsize=(10, 4))
+# hide frame:
+ax.set_frame_on(False)
+ax.set_yticks([])
+# show values with bars:
+for container in ax.containers:
+    ax.bar_label(container, fmt="%.0f")
+plt.tight_layout()
+plt.show()
+
+
+# plot of daily burner activity hours and outside temperatures over time,
+# with rolling average and overall means:
+import re
+
+window_d = 90  # looong rolling average window, to really smooth out kinks
+df2 = pd.DataFrame()
+df2["h"] = (  # burner status < 17 == active:
+    df[df[burner_status_column] < 17].groupby("date").date.count() / samples_per_hour
+)
+df2["t"] = df.groupby("date")[outside_temperature_column].mean()
+df2["h rolling"] = df2.h.rolling(window_d, center=True).mean()
+df2["t rolling"] = df2.t.rolling(window_d, center=True).mean()
+df2["h mean"] = df2.h.mean()
+df2["t mean"] = df2.t.mean()
+h_color, t_color = "red", "green"
+ax = df2.plot(
+    secondary_y=["t", "t rolling", "t mean"],
+    style=[h_color, t_color, h_color, t_color, h_color[0] + ":", t_color[0] + ":"],
+    legend=False,
+    rot=90,
+)
+# make day curves thin, rolling averages and means wide:
+for line in ax.get_lines() + ax.right_ax.get_lines():
+    line.set_linewidth(2 if re.search("rolling|mean", line.get_label()) else 0.2)
+ax.set_title(
+    f"Daily burner activity [h] ({h_color}) and\n"
+    + f"{outside_temperature_column} ({t_color}),\n"
+    + f"with {window_d} days rolling average and overall means"
+)
+# color axis ticks to match curves:
+ax.tick_params(axis="y", colors=h_color)
+ax.right_ax.tick_params(axis="y", colors=t_color)
+plt.tight_layout()
+plt.show()

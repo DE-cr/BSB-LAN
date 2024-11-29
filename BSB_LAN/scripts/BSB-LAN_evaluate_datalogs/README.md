@@ -94,7 +94,11 @@ extended period of time, you can also create something like this:
 
 ![BurnerActivity](examples/BSB-LAN_evaluate_datalogs.py_burner_activity_bars.png)
 
-... and if you have also logged the outside temperatures with it, something
-like this:
+... or find out how much fuel has already been used since the last delivery:
+
+![FuelUsed](examples/BSB-LAN_evaluate_datalogs.py_fuel_used.png)
+
+... and if you have also logged the outside temperatures with it, you can plot
+something like this:
 
 ![BurnerActivityAndTemp](examples/BSB-LAN_evaluate_datalogs.py_burner_activity_plots.png)

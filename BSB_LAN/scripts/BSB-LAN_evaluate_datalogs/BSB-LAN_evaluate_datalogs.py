@@ -161,7 +161,7 @@ calendar_plot(df, "time", flow_temperature_set_point_column)
 
 # bar plot of burner activity hours by year/month:
 burner_status_column = find_parameter_columns(df, 8005)[0]
-samples_per_hour = 60
+samples_per_hour = 60  # recommend (adjust, if necessary)
 
 ax = (  # burner status < 17 == active:
     df[df[burner_status_column] < 17].groupby(["year", "month"]).year.count()
@@ -209,5 +209,31 @@ ax.set_title(
 # color axis ticks to match curves:
 ax.tick_params(axis="y", colors=h_color)
 ax.right_ax.tick_params(axis="y", colors=t_color)
+plt.tight_layout()
+plt.show()
+
+
+## plot of daily fuel consumption since last delivery, with total:
+# only consider data since last delivery:
+most_recent_delivery = "2024-03-05"  # adjust!
+dfx = df.query(f'Date >= "{most_recent_delivery}"')
+# calculate fuel consumption
+fuel_units_per_hour = 3  # adjust, if necessary!
+fuel_units = (
+    dfx[dfx[burner_status_column] < 17].groupby("date").date.count()
+    / samples_per_hour
+    * kg_per_hour
+)
+# fill in gaps (days w/o (reported) burner activity):
+fuel_units = fuel_units.reindex(
+    pd.date_range(start=most_recent_delivery, end=pd.Timestamp.today(), freq="D")
+).fillna(0)
+# plot:
+fuel_units.plot(
+    title=f"Fuel units per day, since {most_recent_delivery}"
+    + f" (overall={round(fuel_units.sum())})",
+    grid=True,
+    rot=90,
+)
 plt.tight_layout()
 plt.show()

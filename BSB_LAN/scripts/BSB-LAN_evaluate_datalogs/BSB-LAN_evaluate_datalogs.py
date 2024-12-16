@@ -56,7 +56,10 @@ print(df.info())
 print(f"Found data from {df.Date.min()} to {df.Date.max()}")
 
 
-# -- usage examples for data in pandas:
+# -----------------------------------------------------------------------------
+# Usage examples (!) for data in pandas, for you to select, adapt, expand, ...
+# Note: Most likely you'll need to adjust the parameter numbers used here to
+#       those in your logged data! (Look for 'find_parameter_columns' below!)
 
 import matplotlib.pyplot as plt
 

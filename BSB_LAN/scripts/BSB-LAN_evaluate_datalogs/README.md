@@ -42,7 +42,7 @@ For that, you can either provide the names of files containing BSB-LAN /D
 datalogs or the script will try to load the current data directly from
 `http://bsb-lan/D`.
 
-Please note that you will probably have to *adjust* the burner parameters
+Please note that you may have to *adjust* the burner parameters
 used in my examples to the ones you've been logging! This should be easy
 enough, though: Just replace the parameter numbers in the script - or simply
 remove the code sections you don't want or for which you don't have the

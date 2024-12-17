@@ -23,8 +23,7 @@ if len(argv) > 1:
         print("Reading", fn, "...")
         df = pd.concat([df, pd.read_csv(fn, sep=";")])
 else:
-    print("Reading data from BSB-LAN ...")
-    df = pd.read_csv("http://bsb-lan/D", sep=";")
+    raise SystemExit(f"No input to process given on command line.")
 
 print("Fitting data ...")
 

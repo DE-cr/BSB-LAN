@@ -39,8 +39,8 @@ Date,8700 - Aussentemperatur [°C],8770 - Raumtemperatur-Istwert 2 [°C],8773 - 
 The provided Python script also includes some examples on how the data could be
 processed/analyzed. To see if they can be applied to your data, just execute the script!
 For that, you can either provide the names of files containing BSB-LAN /D
-datalogs or the script will try to load the current data directly from
-`http://bsb-lan/D`.
+datalogs after the script name or the address to load the current data directly
+from your BSB-LAN system, e.g. `http://bsb-lan/D`.
 
 Please note that you may have to *adjust* the burner parameters
 used in my examples to the ones you've been logging! This should be easy

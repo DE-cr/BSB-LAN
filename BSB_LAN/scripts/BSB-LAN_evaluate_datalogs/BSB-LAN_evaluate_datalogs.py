@@ -205,15 +205,14 @@ import re
 
 if outside_temperature_column and burner_status_column:
     window_d = 90  # looong rolling average window, to really smooth out kinks
+    df["BurnerActive"] = df[burner_status_column] < 17
+    dfd = df.groupby("date")
     df2 = pd.DataFrame()
-    df2["h"] = (  # burner status < 17 == active:
-        df[df[burner_status_column] < 17].groupby("date").date.count()
-        / samples_per_hour
-    )
+    df2["h"] = dfd.BurnerActive.sum() / samples_per_hour
+    df2["t"] = dfd[outside_temperature_column].mean()
     df2["h rolling"] = df2.h.rolling(window_d, center=True).mean()
-    df2["h mean"] = df2.h.mean()
-    df2["t"] = df.groupby("date")[outside_temperature_column].mean()
     df2["t rolling"] = df2.t.rolling(window_d, center=True).mean()
+    df2["h mean"] = df2.h.mean()
     df2["t mean"] = df2.t.mean()
     h_color, t_color = "red", "green"
     ax = df2.plot(

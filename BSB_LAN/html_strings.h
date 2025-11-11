@@ -426,7 +426,11 @@ const char header_html[] =
   "td{vertical-align:top}" NEWLINE
   "td.header{vertical-align:middle}" NEWLINE
   "svg.logo{width:10%;height:10%}" NEWLINE
-  "input{width:100%;box-sizing:border-box}select{width:100%}</style>" NEWLINE
+  "input{width:100%;box-sizing:border-box}select{width:100%}" NEWLINE
+#ifdef SIMPLE_DARK_MODE
+  "body{background-color:#fff}" NEWLINE
+#endif
+  "</style>" NEWLINE
   "</head><body>";
 const char header_html2[] =
   "<script>function set(p,d){" NEWLINE

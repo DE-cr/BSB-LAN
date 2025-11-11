@@ -420,16 +420,17 @@ const char header_html[] =
   "<link rel=\"icon\" href=\"/favicon.svg\">" NEWLINE  // without this, most browsers will try to load /favicon.ico
   // "<link rel=\"icon\" sizes=\"16x16\" href=\"/favicon.ico\">" NEWLINE  // not used by svg capable browser, anyway (?)
   "<title>BSB-LAN</title>" NEWLINE
-  "<style>A{text-decoration:none}A:visited,active{color:blue}A:hover{color:red;background-color:yellow}A:focus{color:red}" NEWLINE
+  "<style>" NEWLINE
+#ifdef SIMPLE_DARK_MODE
+  "body{color:#000;background-color:#fff}" NEWLINE  // black on white, will be inverted by style filter below!
+#endif
+  "A{text-decoration:none}A:visited,active{color:blue}A:hover{color:red;background-color:yellow}A:focus{color:red}" NEWLINE
   "a.logo:hover{background-color:initial;text-decoration:initial}" NEWLINE
   "table{width:100%;max-width:1024px;margin:auto}" NEWLINE
   "td{vertical-align:top}" NEWLINE
   "td.header{vertical-align:middle}" NEWLINE
   "svg.logo{width:10%;height:10%}" NEWLINE
   "input{width:100%;box-sizing:border-box}select{width:100%}" NEWLINE
-#ifdef SIMPLE_DARK_MODE
-  "body{background-color:#fff}" NEWLINE
-#endif
   "</style>" NEWLINE
   "</head><body>";
 const char header_html2[] =
@@ -447,7 +448,7 @@ const char header_html2[] =
     "window.open(document.getElementById('main_link').href+'S'+p+'='+v,'_self')" NEWLINE
   "}" NEWLINE
 #ifdef SIMPLE_DARK_MODE
-  "document.documentElement.style.filter='invert(95%)hue-rotate(180deg)'" NEWLINE
+  "document.documentElement.style.filter='invert(1)hue-rotate(180deg)'" NEWLINE  // invert(1) is short for invert(100%)
 #endif
   "</script>";
 const char header_html3[] =

@@ -1,12 +1,12 @@
 #if defined(ARDUINO) && ARDUINO >= 100
-#include "Arduino.h"
+  #include "Arduino.h"
 #else
-#include "WProgram.h"
+  #include "WProgram.h"
 #endif
-#if defined(ESP32)
-#include "driver/uart.h"
-#include "soc/uart_struct.h"
-#include "soc/uart_reg.h"
+#if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
+  #include "driver/uart.h"
+  #include "soc/uart_struct.h"
+  #include "soc/uart_reg.h"
 #endif
 
 #include "bsb.h"
@@ -34,10 +34,10 @@ BSB::BSB(uint8_t rx, uint8_t tx, uint8_t addr, uint8_t d_addr) {
 }
 
 void BSB::enableInterface() {
-#if defined(ESP32)
+#if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
   Serial1.begin(4800, SERIAL_8O1, rx_pin, tx_pin);
   Serial1.setRxFIFOFull(1);
-  Serial1.setRxTimeout(2);
+  Serial1.setRxTimeout(1);
 /*
   uart_intr_config_t uart_intr;
   uart_intr.intr_enable_mask = UART_RXFIFO_FULL_INT_ENA_M
@@ -105,6 +105,11 @@ uint8_t BSB::getBusDest() {
   return destAddr;
 }
 
+uint8_t BSB::setBusDest(uint8_t addr) {
+  destAddr = addr;
+  return destAddr;
+}
+
 uint8_t BSB::getLen_idx() {
 /*
   if (bus_type == BUS_PPS) {
@@ -137,7 +142,7 @@ void BSB::print(byte* msg) {
 }
 
 // Receives a message and stores it to buffer
-boolean BSB::Monitor(byte* msg) {
+bool BSB::Monitor(byte* msg) {
   unsigned long int ts;
   byte i=0;
     
@@ -175,7 +180,7 @@ bool BSB::GetMessage(byte* msg) {
   byte i=0;
   uint8_t read;
 
-  while (serial->available() > 0) {
+  while (serial->available() > 0 && i < 33) {
     // Read serial data...
     read = readByte();
 /*
@@ -220,7 +225,7 @@ bool BSB::GetMessage(byte* msg) {
         delay(4);   // I wonder why HardwareSerial needs longer than SoftwareSerial until a character is ready to be processed. Also, why 3ms are fine for the Mega, but at least 4ms are necessary on the Due
       }
       // read the rest of the message
-      while (serial->available() > 0) {
+      while (serial->available() > 0 && i<33) {
         read = readByte();
         msg[i++] = read;
 /*
@@ -345,49 +350,8 @@ uint16_t BSB::_crc_xmodem_update (uint16_t crc, uint8_t data) {
 }
 
 // Low-Level sending of message to bus
-inline int8_t BSB::_send(byte* msg) {
-// Nun - Ein Teilnehmer will senden :
-  byte data, len;
-  if (bus_type != 2) {
-    len = msg[len_idx];
-  } else {
-    len = len_idx;
-  }
-  // switch (bus_type) {
-    // case 0:
-      // msg[0] = 0xDC;
-      // msg[1] = myAddr | 0x80;
-      // msg[2] = destAddr;
-      // break;
-    // case 1:
-      // msg[0] = 0x78;
-      // msg[2] = destAddr;
-      // msg[3] = myAddr;
-      // break;
-  // }
-  {
-    if (bus_type == 0) {
-      msg[0] = 0xDC;
-      msg[1] = myAddr | 0x80;
-      msg[2] = destAddr;
-      uint16_t crc = CRC (msg, len -2);
-      msg[len -2] = (crc >> 8);
-      msg[len -1] = (crc & 0xFF);
-    }
-    if (bus_type == 1) {
-      msg[0] = 0x78;
-      msg[2] = destAddr;
-      msg[3] = myAddr;
-      uint16_t crc = CRC_LPB (msg, len);
-      msg[len-1] = (crc >> 8);
-      msg[len] = (crc & 0xFF);
-    }
-    if (bus_type == BUS_PPS) {
-      uint8_t crc = CRC_PPS (msg, len);
-      msg[len] = crc;
-    }
-  }
-
+int8_t BSB::_send(byte* msg) {
+  byte data;
 #if DEBUG_LL  
   print(msg);
 #endif  
@@ -477,9 +441,9 @@ auf den entsprechenden Empfänger dann gleich wieder verworfen. Als Konsequenz w
 die ESP32 ausgeweitet.
 */
 
-  byte loop_len = len;
+  byte loop_len = len_idx;
   if (bus_type != 2) {
-    loop_len = len + bus_type - 1; // same msg length difference as above
+    loop_len = msg[len_idx] + bus_type - 1; // same msg length difference as above
   }
   for (byte i=0; i <= loop_len; i++) {
     data = msg[i];
@@ -550,8 +514,85 @@ die ESP32 ausgeweitet.
 }
 
 int8_t BSB::Send(uint8_t type, uint32_t cmd, byte* rx_msg, byte* tx_msg, byte* param, byte param_len, bool wait_for_reply) {
-  byte i;
+  byte i, len;
   byte length_offset = 0;
+
+    // first two bytes are swapped
+    byte A2 = (cmd & 0xff000000) >> 24;
+    byte A1 = (cmd & 0x00ff0000) >> 16;
+    byte A3 = (cmd & 0x0000ff00) >> 8;
+    byte A4 = (cmd & 0x000000ff);
+
+    // special treatment of internal query types
+    if (type == 0x12) {   // TYPE_IQ1
+      A1 = A3;
+      A2 = A4;
+      length_offset = 2;
+    }
+    if (type == 0x14) {   // TYPE_IQ2
+      A1 = A4;
+      length_offset = 3;
+    }
+  
+  if (bus_type != BUS_PPS) {
+    if (bus_type == 1) {
+      tx_msg[0] = 0x78;
+      tx_msg[1] = param_len + 14 - length_offset;
+      tx_msg[4] = 0xC0;	// some kind of sending/receiving flag?
+      tx_msg[5] = 0x02;	// yet unknown
+      tx_msg[6] = 0x00;	// yet unknown
+      tx_msg[7] = 0x14;	// yet unknown
+      tx_msg[8] = type;
+      // Adress
+      tx_msg[9] = A1;
+      tx_msg[10] = A2;
+      tx_msg[11] = A3;
+      tx_msg[12] = A4;
+    } else {
+      tx_msg[0] = 0xDC;
+      tx_msg[3] = param_len + 11 - length_offset;
+      tx_msg[4] = type;
+      // Adress
+      tx_msg[5] = A1;
+      tx_msg[6] = A2;
+      tx_msg[7] = A3;
+      tx_msg[8] = A4;
+    }
+
+    // Value
+    for (i=0; i < param_len; i++) {
+      if (bus_type == 1) {
+        tx_msg[13+i] = param[i];
+      } else {
+        tx_msg[9+i] = param[i];
+      }
+    }
+
+  }
+
+  if (bus_type != 2) {
+    len = tx_msg[len_idx];
+  } else {
+    len = len_idx;
+  }
+  if (bus_type == 0) {
+    tx_msg[1] = myAddr | 0x80;
+    tx_msg[2] = destAddr;
+    uint16_t crc = CRC (tx_msg, len -2);
+    tx_msg[len -2] = (crc >> 8);
+    tx_msg[len -1] = (crc & 0xFF);
+  }
+  if (bus_type == 1) {
+    tx_msg[2] = destAddr;
+    tx_msg[3] = myAddr;
+    uint16_t crc = CRC_LPB (tx_msg, len);
+    tx_msg[len-1] = (crc >> 8);
+    tx_msg[len] = (crc & 0xFF);
+  }
+  if (bus_type == BUS_PPS) {
+    uint8_t crc = CRC_PPS (tx_msg, len);
+    tx_msg[len] = crc;
+  }
 
   if (bus_type == BUS_PPS) {
     return _send(tx_msg);
@@ -561,53 +602,6 @@ int8_t BSB::Send(uint8_t type, uint32_t cmd, byte* rx_msg, byte* tx_msg, byte* p
     readByte();
   }
 
-  // first two bytes are swapped
-  byte A2 = (cmd & 0xff000000) >> 24;
-  byte A1 = (cmd & 0x00ff0000) >> 16;
-  byte A3 = (cmd & 0x0000ff00) >> 8;
-  byte A4 = (cmd & 0x000000ff);
-
-  // special treatment of internal query types
-  if (type == 0x12) {   // TYPE_IQ1
-    A1 = A3;
-    A2 = A4;
-    length_offset = 2;
-  }
-  if (type == 0x14) {   // TYPE_IQ2
-    A1 = A4;
-    length_offset = 3;
-  }
-  
-  if (bus_type == 1) {
-    tx_msg[1] = param_len + 14 - length_offset;
-    tx_msg[4] = 0xC0;	// some kind of sending/receiving flag?
-    tx_msg[5] = 0x02;	// yet unknown
-    tx_msg[6] = 0x00;	// yet unknown
-    tx_msg[7] = 0x14;	// yet unknown
-    tx_msg[8] = type;
-    // Adress
-    tx_msg[9] = A1;
-    tx_msg[10] = A2;
-    tx_msg[11] = A3;
-    tx_msg[12] = A4;
-  } else {
-    tx_msg[3] = param_len + 11 - length_offset;
-    tx_msg[4] = type;
-    // Adress
-    tx_msg[5] = A1;
-    tx_msg[6] = A2;
-    tx_msg[7] = A3;
-    tx_msg[8] = A4;
-  }
-
-  // Value
-  for (i=0; i < param_len; i++) {
-    if (bus_type == 1) {
-      tx_msg[13+i] = param[i];
-    } else {
-      tx_msg[9+i] = param[i];
-    }
-  }
   int8_t return_value = _send(tx_msg);
   if(return_value != BUS_OK) return return_value;
   if(!wait_for_reply) return return_value;
@@ -654,8 +648,8 @@ int8_t BSB::Send(uint8_t type, uint32_t cmd, byte* rx_msg, byte* tx_msg, byte* p
   return BUS_NOMATCH;
 }
 
-boolean BSB::rx_pin_read() {
-  return boolean(* portInputRegister(digitalPinToPort(rx_pin)) & digitalPinToBitMask(rx_pin)) ^ 1;
+bool BSB::rx_pin_read() {
+  return bool(* portInputRegister(digitalPinToPort(rx_pin)) & digitalPinToBitMask(rx_pin)) ^ 1;
 }
 
 uint8_t BSB::readByte() {

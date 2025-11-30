@@ -53,7 +53,6 @@ void mqtt_sendtoBroker(parameter param) {
   initStringBuffer(&sb_payload, MQTTPayload, sizeof(MQTTPayload));
   initStringBuffer(&sb_topic, MQTTTopic, sizeof(MQTTTopic));
   appendStringBuffer(&sb_topic, "%s/%d/%d/%g/status", MQTTTopicPrefix, (param.dest_addr==-1?bus->getBusDest():param.dest_addr), decodedTelegram.cat, param.number);
-
   switch(mqtt_mode)
   {
     // =============================================
@@ -110,7 +109,7 @@ void mqtt_sendtoBroker(parameter param) {
       if (decodedTelegram.data_type == DT_ENUM && decodedTelegram.enumdescaddr) {
         appendStringBuffer(&sb_payload, decodedTelegram.enumdescaddr);
       }
-      appendStringBuffer(&sb_payload, "\",\"unit\":\"%s\",\"error\":%d}}", decodedTelegram.unit, decodedTelegram.error);
+      appendStringBuffer(&sb_payload, "\",\"unit\":\"%s\",\"error\":%d}}", decodedTelegram.unit_mqtt, decodedTelegram.error);
       break;
     default:
       printFmtToDebug("Invalid mqtt mode: %d. Must be 1,2 or 3. Skipping publish.",mqtt_mode);
@@ -120,7 +119,7 @@ void mqtt_sendtoBroker(parameter param) {
   // debugging..
   printFmtToDebug("Publishing to topic: %s\r\n", MQTTTopic);
   // Now publish the json payload only once
-  if (MQTTPubSubClient != NULL) {
+  if (MQTTPubSubClient != nullptr) {
     if (MQTTPubSubClient->connected()) {
       printFmtToDebug("Payload: %s\r\n", MQTTPayload);
       MQTTPubSubClient->publish(MQTTTopic, MQTTPayload, true);
@@ -182,21 +181,12 @@ char* mqtt_get_will_topic() {
  * *************************************************************** */
 
 bool mqtt_connect() {
-  char* tempstr = (char*)malloc(sizeof(mqtt_broker_addr));  // make a copy of mqtt_broker_addr for destructive strtok operation
-  strcpy(tempstr, mqtt_broker_addr);
-  uint16_t mqtt_port = 1883; 
-  char* mqtt_host = strtok(tempstr,":");  // hostname is before an optional colon that separates the port
-  char* token = strtok(NULL, ":");   // remaining part is the port number
-  if (token != 0) {
-    mqtt_port = atoi(token);
-  }
-  free(tempstr);
-
   bool first_connect = false;
-  if(MQTTPubSubClient == NULL) {
-    mqtt_client= new ComClient();
+  if(MQTTPubSubClient == nullptr) {
+    mqtt_client = new ComClient();
     MQTTPubSubClient = new PubSubClient(mqtt_client[0]);
-    MQTTPubSubClient->setBufferSize(2048);
+    MQTTPubSubClient->setBufferSize(2048, 2048);
+    MQTTPubSubClient->setKeepAlive(120); // raise to higher value so broker does not disconnect on latency
     mqtt_reconnect_timer = 0;
     first_connect = true;
   }
@@ -204,7 +194,7 @@ bool mqtt_connect() {
     if (!first_connect && !mqtt_reconnect_timer) {
       // We just lost connection, don't try to reconnect immediately
       mqtt_reconnect_timer = millis();
-      printlnToDebug("MQTT connection lost");
+      printFmtToDebug("MQTT connection lost with status code %d\r\n", MQTTPubSubClient->state());
       return false;
     }
     if (mqtt_reconnect_timer && millis() - mqtt_reconnect_timer < 10000) {
@@ -212,11 +202,20 @@ bool mqtt_connect() {
       return false;
     }
 
-    char* MQTTUser = NULL;
+    char tempstr[sizeof(mqtt_broker_addr)];  // make a copy of mqtt_broker_addr for destructive strtok operation
+    strcpy(tempstr, mqtt_broker_addr);
+    uint16_t mqtt_port = 1883; 
+    char* mqtt_host = strtok(tempstr,":");  // hostname is before an optional colon that separates the port
+    char* token = strtok(NULL, ":");   // remaining part is the port number
+    if (token != 0) {
+      mqtt_port = atoi(token);
+    }
+
+    char* MQTTUser = nullptr;
     if(MQTTUsername[0]) {
       MQTTUser = MQTTUsername;
     }
-    const char* MQTTPass = NULL;
+    const char* MQTTPass = nullptr;
     if(MQTTPassword[0]) {
       MQTTPass = MQTTPassword;
     }
@@ -226,17 +225,16 @@ bool mqtt_connect() {
     printFmtToDebug("Will topic: %s\r\n", mqtt_get_will_topic());
     MQTTPubSubClient->connect(mqtt_get_client_id(), MQTTUser, MQTTPass, mqtt_get_will_topic(), 1, true, "offline");
     if (!MQTTPubSubClient->connected()) {
-      printlnToDebug("Failed to connect to MQTT broker, retrying...");
+      printFmtToDebug("Failed to connect to MQTT broker with status code %d, retrying...\r\n", MQTTPubSubClient->state());
       mqtt_reconnect_timer = millis();
     } else {
       printlnToDebug("Connected to MQTT broker, updating will topic");
       mqtt_reconnect_timer = 0;
-      char tempTopic[67];
+      char tempTopic[sizeof(MQTTTopicPrefix)+2];
       strcpy(tempTopic, MQTTTopicPrefix);
       strcat(tempTopic, "/#");
       MQTTPubSubClient->subscribe(tempTopic, 1);   //Luposoft: set the topic listen to
       printFmtToDebug("Subscribed to topic '%s'\r\n", tempTopic);
-      MQTTPubSubClient->setKeepAlive(120);       //Luposoft: just for savety
       MQTTPubSubClient->setCallback(mqtt_callback);  //Luposoft: set to function is called when incoming message
       MQTTPubSubClient->publish(mqtt_get_will_topic(), "online", true);
       printFmtToDebug("Published status 'online' to topic '%s'\r\n", mqtt_get_will_topic());
@@ -274,7 +272,7 @@ void mqtt_disconnect() {
       printlnToDebug("Dropping unconnected MQTT client");
     }
     delete MQTTPubSubClient;
-    MQTTPubSubClient = NULL;
+    MQTTPubSubClient = nullptr;
     mqtt_client->stop();
     delete mqtt_client;
   }
@@ -300,7 +298,8 @@ void mqtt_callback(char* topic, byte* passed_payload, unsigned int length) {
   uint8_t destAddr = bus->getBusDest();
   uint8_t save_my_dev_fam = my_dev_fam;
   uint8_t save_my_dev_var = my_dev_var;
-  uint32_t save_my_dev_id = my_dev_id;
+  uint16_t save_my_dev_oc = my_dev_oc;
+  uint32_t save_my_dev_serial = my_dev_serial;
   uint8_t setmode = 0;  // 0 = send INF, 1 = send SET, 2 = query
   int topic_len = strlen(MQTTTopicPrefix);
   parameter param;
@@ -335,10 +334,10 @@ void mqtt_callback(char* topic, byte* passed_payload, unsigned int length) {
       char* payload_copy = (char*)malloc(strlen(payload) + 1);
       strcpy(payload_copy, payload);
       token = strtok(payload_copy, ",");   // parameters to be updated are separated by a comma, parameters either in topic structure or parameter!device notation
-      while (token != NULL) {
+      while (token != nullptr) {
         while (token[0] == ' ') token++;
         if (token[0] == '/') {
-          if (sscanf(token, "/%" PRId16 "/%*d/%g",&param.dest_addr, &param.number) != 2) {
+          if (sscanf(token, "/%hd/%*d/%g",&param.dest_addr, &param.number) != 2) {
             printFmtToDebug("Invalid topic structure, discarding...\r\n");
             break;
           }
@@ -358,7 +357,8 @@ void mqtt_callback(char* topic, byte* passed_payload, unsigned int length) {
           bus->setBusType(bus->getBusType(), bus->getBusAddr(), destAddr);
           my_dev_fam = save_my_dev_fam;
           my_dev_var = save_my_dev_var;
-          my_dev_id = save_my_dev_id;
+          my_dev_oc = save_my_dev_oc;
+          my_dev_serial = save_my_dev_serial;
         }
         token = strtok(NULL, ",");   // next parameter
       }
@@ -379,8 +379,14 @@ void mqtt_callback(char* topic, byte* passed_payload, unsigned int length) {
       default: {setmode = 2;break;}
     }
     param = parsingStringToParameter(payload);
-    payload=strchr(payload,'=');
-    payload++;
+    if (setmode < 2) {
+      payload=strchr(payload,'=');
+      if (payload == nullptr) {
+        printFmtToDebug("MQTT message does not contain '=', discarding...\r\n");
+        return;
+      }
+      payload++;
+    }
   } else {
     printFmtToDebug("MQTT message not recognized: %s - %s\r\n", topic, payload);
     return;
@@ -407,12 +413,13 @@ void mqtt_callback(char* topic, byte* passed_payload, unsigned int length) {
     bus->setBusType(bus->getBusType(), bus->getBusAddr(), destAddr);
     my_dev_fam = save_my_dev_fam;
     my_dev_var = save_my_dev_var;
-    my_dev_id = save_my_dev_id;
+    my_dev_oc = save_my_dev_oc;
+    my_dev_serial = save_my_dev_serial;
   }
 
 }
 
-boolean mqtt_send_discovery(boolean create=true) {
+bool mqtt_send_discovery(bool create=true) {
 //  uint8_t destAddr = bus->getBusDest();
   char MQTTPayload[2048] = "";
   char MQTTTopic[80] = "";
@@ -422,15 +429,24 @@ boolean mqtt_send_discovery(boolean create=true) {
   int i = 0;
   float line = 0;
   float old_line = -1;
-  for (uint16_t j=0;j<sizeof(cmdtbl)/sizeof(cmdtbl[0]) - 1;j++) {
+  for (uint16_t j=0;j<active_cmdtbl_size - 1;j++) {
     if (bus->getBusType() == BUS_PPS && line < 15000) {
       j = findLine(15000);
     }
-    line = cmdtbl[j].line;
+    line = active_cmdtbl[j].line;
     if (line == old_line) continue;
     if (bus->getBusType() != BUS_PPS && line >= 15000 && line <= 16000) continue;
     if (line == 19999) continue;    // skip entry for unknown parameter
     if (line > 20999) break;
+    if (LoggingMode & CF_LOGMODE_MQTT_ONLY_LOG_PARAMS) {
+      boolean isLogged = false;
+      for (int i=0;i<numLogValues;i++) {
+        if (log_parameters[i].number == line && (log_parameters[i].dest_addr == bus->getBusDest() || (log_parameters[i].dest_addr == -1 && bus->getBusDest() ==  dest_address))) {
+          isLogged = true;
+        }
+      }
+      if (!isLogged) continue;
+    }
     do {
       i=findLine(line);
       if (i>=0) {
@@ -441,23 +457,55 @@ boolean mqtt_send_discovery(boolean create=true) {
         loadPrognrElementsFromTable(line, i);
         loadCategoryDescAddr();
         appendStringBuffer(&sb_topic, "homeassistant/");
-        appendStringBuffer(&sb_payload, "{\"~\":\"%s/%d/%d/%g\",\"unique_id\":\"%g-%d-%d-%d\",\"state_topic\":\"~/status\",", MQTTTopicPrefix, bus->getBusDest(), decodedTelegram.cat, line, line, cmdtbl[i].dev_fam, cmdtbl[i].dev_var, my_dev_id);
+        appendStringBuffer(&sb_payload, "{\"~\":\"%s/%d/%d/%g\",\"unique_id\":\"%g-%d-%d-%d\",\"state_topic\":\"~/status\",", MQTTTopicPrefix, bus->getBusDest(), decodedTelegram.cat, line, line, active_cmdtbl[i].dev_fam, active_cmdtbl[i].dev_var, my_dev_serial);
         if (decodedTelegram.isswitch) {
           appendStringBuffer(&sb_payload, "\"icon\":\"mdi:toggle-switch\",");
-        } else if (!strcmp(decodedTelegram.unit, U_DEG) || !strcmp(decodedTelegram.unit, U_TEMP_PER_MIN) || !strcmp(decodedTelegram.unit, U_CEL_MIN)) {
+        } else if ((decodedTelegram.unit_enum == UNIT_DEG) || (decodedTelegram.unit_enum == UNIT_TEMP_PER_MIN) || (decodedTelegram.unit_enum == UNIT_CEL_MIN)) {
           appendStringBuffer(&sb_payload, "\"icon\":\"mdi:thermometer\",");
-        } else if (!strcmp(decodedTelegram.unit, U_PERC)) {
+          if (mqtt_unit_set == CF_MQTT_UNIT_HOMEASSISTANT && decodedTelegram.unit_enum == UNIT_DEG) {
+            appendStringBuffer(&sb_payload, "\"device_class\":\"temperature\",");
+          }
+        } else if (decodedTelegram.unit_enum == UNIT_RELHUMIDITY) {
           appendStringBuffer(&sb_payload, "\"icon\":\"mdi:percent\",");
-        } else if (!strcmp(decodedTelegram.unit, U_MONTHS) || !strcmp(decodedTelegram.unit, U_DAYS) || decodedTelegram.type == VT_WEEKDAY || (decodedTelegram.type >= VT_DATETIME && decodedTelegram.type <= VT_TIMEPROG)) {
+          if (mqtt_unit_set == CF_MQTT_UNIT_HOMEASSISTANT) {
+            appendStringBuffer(&sb_payload, "\"device_class\":\"humidity\",");
+          }
+        } else if (decodedTelegram.unit_enum == UNIT_PERC) {
+          appendStringBuffer(&sb_payload, "\"icon\":\"mdi:percent\",");
+        } else if (decodedTelegram.unit_enum == UNIT_MONTHS || decodedTelegram.unit_enum == UNIT_DAYS || decodedTelegram.type == VT_WEEKDAY || (decodedTelegram.type >= VT_DATETIME && decodedTelegram.type <= VT_TIMEPROG)) {
           appendStringBuffer(&sb_payload, "\"icon\":\"mdi:calendar\",");
-        } else if (!strcmp(decodedTelegram.unit, U_HOUR) || !strcmp(decodedTelegram.unit, U_MIN) || !strcmp(decodedTelegram.unit, U_SEC) || !strcmp(decodedTelegram.unit, U_MSEC) || decodedTelegram.type == VT_HOUR_MINUTES || decodedTelegram.type == VT_HOUR_MINUTES_N || decodedTelegram.type == VT_PPS_TIME) {
+        } else if (decodedTelegram.unit_enum == UNIT_HOUR || decodedTelegram.unit_enum == UNIT_MIN || decodedTelegram.unit_enum == UNIT_SEC || decodedTelegram.unit_enum == UNIT_MSEC || decodedTelegram.type == VT_HOUR_MINUTES || decodedTelegram.type == VT_HOUR_MINUTES_N || decodedTelegram.type == VT_PPS_TIME) {
           appendStringBuffer(&sb_payload, "\"icon\":\"mdi:clock\",");
-        } else if (!strcmp(decodedTelegram.unit, U_RPM)) {
+        } else if (decodedTelegram.unit_enum == UNIT_RPM) {
           appendStringBuffer(&sb_payload, "\"icon\":\"mdi:fan\",");
-        } else if (!strcmp(decodedTelegram.unit, U_WATT) || !strcmp(decodedTelegram.unit, U_VOLT) || !strcmp(decodedTelegram.unit, U_KW) || !strcmp(decodedTelegram.unit, U_KWH) || !strcmp(decodedTelegram.unit, U_KWHM3) || !strcmp(decodedTelegram.unit, U_MWH) || !strcmp(decodedTelegram.unit, U_CURR) || !strcmp(decodedTelegram.unit, U_AMP)) {
+        } else if (decodedTelegram.unit_enum == UNIT_WATT || decodedTelegram.unit_enum == UNIT_VOLT || decodedTelegram.unit_enum == UNIT_KW || decodedTelegram.unit_enum == UNIT_KWH || decodedTelegram.unit_enum == UNIT_KWHM3 || decodedTelegram.unit_enum == UNIT_MWH || decodedTelegram.unit_enum == UNIT_CURR || decodedTelegram.unit_enum == UNIT_AMP) {
           appendStringBuffer(&sb_payload, "\"icon\":\"mdi:lightning-bolt\",");
+          if (mqtt_unit_set == CF_MQTT_UNIT_HOMEASSISTANT) {
+            if (decodedTelegram.unit_enum == UNIT_VOLT) {
+              appendStringBuffer(&sb_payload, "\"device_class\":\"voltage\",");
+            } else if (decodedTelegram.unit_enum == UNIT_CURR || decodedTelegram.unit_enum == UNIT_AMP) {
+              appendStringBuffer(&sb_payload, "\"device_class\":\"current\",");
+            } else if (decodedTelegram.unit_enum == UNIT_WATT || decodedTelegram.unit_enum == UNIT_KW) {
+              appendStringBuffer(&sb_payload, "\"device_class\":\"power\",");
+            } else if (decodedTelegram.unit_enum == UNIT_KWH) {
+              appendStringBuffer(&sb_payload, "\"device_class\":\"energy\",");
+            }
+          }
         } else if (decodedTelegram.type != VT_ENUM && decodedTelegram.type != VT_CUSTOM_ENUM && decodedTelegram.type != VT_CUSTOM_BYTE && decodedTelegram.type != VT_CUSTOM_BIT) {
           appendStringBuffer(&sb_payload, "\"icon\":\"mdi:numeric\",");
+          if (mqtt_unit_set == CF_MQTT_UNIT_HOMEASSISTANT) {
+            if (decodedTelegram.unit_enum == UNIT_BAR || decodedTelegram.unit_enum == UNIT_ATM_PRESSURE) {
+              appendStringBuffer(&sb_payload, "\"device_class\":\"pressure\",");
+            } else if (decodedTelegram.unit_enum == UNIT_HERTZ) {
+              appendStringBuffer(&sb_payload, "\"device_class\":\"frequency\",");
+            } else if (decodedTelegram.unit_enum == UNIT_METER || decodedTelegram.unit_enum == UNIT_ALTITUDE) {
+              appendStringBuffer(&sb_payload, "\"device_class\":\"distance\",");
+            } else if (decodedTelegram.unit_enum == UNIT_LITER || decodedTelegram.unit_enum == UNIT_CM) {
+              appendStringBuffer(&sb_payload, "\"device_class\":\"volume\",");
+            } else if (decodedTelegram.unit_enum == UNIT_LITERPERHOUR || decodedTelegram.unit_enum == UNIT_LITERPERMIN || decodedTelegram.unit_enum == UNIT_M3H) {
+              appendStringBuffer(&sb_payload, "\"device_class\":\"volume_flow_rate\",");
+            }
+          }
         }
         if (decodedTelegram.readwrite == FL_RONLY || decodedTelegram.type == VT_CUSTOM_ENUM || decodedTelegram.type == VT_CUSTOM_BYTE || decodedTelegram.type == VT_CUSTOM_BIT) {
           if (decodedTelegram.type == VT_ONOFF || decodedTelegram.type == VT_YESNO) {
@@ -466,18 +514,18 @@ boolean mqtt_send_discovery(boolean create=true) {
             sensor_type = MQTT_BINARY_SENSOR;
           } else {
             appendStringBuffer(&sb_topic, "sensor/");
-            if (decodedTelegram.unit[0]) {
-              appendStringBuffer(&sb_payload, "\"unit_of_measurement\":\"%s\",", decodedTelegram.unit);
-              if (strcmp(decodedTelegram.unit, U_HOUR) && strcmp(decodedTelegram.unit, U_KWH)) {    // do not add state_class for potentially cumulative parameters 
-                appendStringBuffer(&sb_payload, "\"state_class\":\"measurement\",");
-              }
+            if ((decodedTelegram.unit_enum != UNIT_NONE) && decodedTelegram.unit_mqtt[0]) {
+              appendStringBuffer(&sb_payload, "\"unit_of_measurement\":\"%s\",", decodedTelegram.unit_mqtt);
+            }
+            if (decodedTelegram.data_type == DT_VALS && (decodedTelegram.unit_enum != UNIT_HOUR) && (decodedTelegram.unit_enum != UNIT_KWH)) {    // do not add state_class for potentially cumulative parameters 
+              appendStringBuffer(&sb_payload, "\"state_class\":\"measurement\",");
             }
             sensor_type = MQTT_SENSOR;
           }
         } else {
           if (decodedTelegram.type == VT_ONOFF || decodedTelegram.type == VT_YESNO) {
-            const char* value_on = NULL;
-            const char* value_off = NULL;
+            const char* value_on = nullptr;
+            const char* value_off = nullptr;
             if (decodedTelegram.type == VT_ONOFF) {
               value_on = STR_ON;
               value_off = STR_OFF;
@@ -511,13 +559,14 @@ boolean mqtt_send_discovery(boolean create=true) {
           }
         }
         appendStringBuffer(&sb_payload, "\"name\":\"%02d-%02d %s - %g - %s", bus->getBusDest(), decodedTelegram.cat, decodedTelegram.catdescaddr, line, decodedTelegram.prognrdescaddr);
-        if (sensor_type == MQTT_TEXT && decodedTelegram.unit[0]) {
-          appendStringBuffer(&sb_payload, " (%s)", decodedTelegram.unit);
+        if (sensor_type == MQTT_TEXT && (decodedTelegram.unit_enum != UNIT_NONE) && decodedTelegram.unit_mqtt[0]) {
+          appendStringBuffer(&sb_payload, " (%s)", decodedTelegram.unit_mqtt);
         }
         appendStringBuffer(&sb_payload, "\",\"device\":{\"name\":\"%s\",\"identifiers\":\"%s-%02X%02X%02X%02X%02X%02X\",\"manufacturer\":\"bsb-lan.de\",\"model\":\"" MAJOR "." MINOR "." PATCH "\"}}", MQTTTopicPrefix, MQTTTopicPrefix, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   
-        appendStringBuffer(&sb_topic, "BSB-LAN/%g-%d-%d-%d/config", line, cmdtbl[i].dev_fam, cmdtbl[i].dev_var, my_dev_id);
+        appendStringBuffer(&sb_topic, "BSB-LAN/%g-%d-%d-%d/config", line, active_cmdtbl[i].dev_fam, active_cmdtbl[i].dev_var, my_dev_serial);
   
+        replace_char(MQTTTopic, '.', '-');
         if (!create) {
           MQTTPayload[0] = '\0';      // If remove flag is set, send empty message to instruct auto discovery to remove the entry 
         }
@@ -532,7 +581,7 @@ boolean mqtt_send_discovery(boolean create=true) {
       }
       old_line = line;
       line = get_next_prognr(line);
-    } while (cmdtbl[j+1].line > line);
+    } while (active_cmdtbl[j+1].line > line);
   }
   return true;
 }

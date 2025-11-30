@@ -12,6 +12,7 @@ markdown_extensions:
 
 plugins:
   - search
+#  - with-pdf
   - autorefs
   - i18n:
       reconfigure_search: true
@@ -42,7 +43,7 @@ plugins:
                 Troubleshooting: Fehlersuche
                 FAQ: FAQ
                 Wiki: Wiki
-                YouTube Tutorials: YoutTube Tutorials
+                YouTube Tutorials: YouTube Tutorials
           - locale: fr
             name: Français
             build: true
@@ -89,4 +90,3 @@ nav:
     - Deutsch: /de/
     - English: /
     - Français: /fr/
-

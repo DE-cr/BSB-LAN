@@ -1,0 +1,63 @@
+name: Arduino CLI Build
+
+on: [push, pull_request, workflow_dispatch]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: esp32-evb
+            fqbn: esp32:esp32:esp32-evb
+            board_options: "PartitionScheme=min_spiffs"
+            extra_flags: ""
+
+          - name: esp32-devkit
+            fqbn: esp32:esp32:esp32
+            board_options: "PartitionScheme=min_spiffs"
+            extra_flags: ""
+
+          - name: due
+            fqbn: arduino:sam:arduino_due_x
+            board_options: ""
+            extra_flags: ""
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install arduino-cli
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+          sudo mv ./bin/arduino-cli /usr/local/bin/arduino-cli
+
+      - name: Install platform cores
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          arduino-cli core install arduino:sam
+
+      - name: Setup config files
+        run: |
+          cp BSB_LAN/BSB_LAN_config.h.default BSB_LAN/BSB_LAN_config.h
+          cp BSB_LAN/BSB_LAN_custom_defs.h.default BSB_LAN/BSB_LAN_custom_defs.h
+
+      - name: Install dependencies
+        run: |
+          arduino-cli lib install Ethernet
+
+      - name: Compile for ${{ matrix.name }}
+        run: |
+          arduino-cli compile \
+            --fqbn ${{ matrix.fqbn }} \
+            --libraries BSB_LAN/libraries \
+            ${{ matrix.extra_flags && format('--build-property build.extra_flags="{0}"', matrix.extra_flags) || '' }} \
+            ${{ matrix.board_options && format('--board-options {0}', matrix.board_options) || '' }} \
+            BSB_LAN

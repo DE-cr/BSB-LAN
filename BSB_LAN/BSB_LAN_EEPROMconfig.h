@@ -1,9 +1,3 @@
-#define CF_LOGMODE_SD_CARD 1
-#define CF_LOGMODE_24AVG 2
-#define CF_LOGMODE_MQTT 4
-#define CF_LOGMODE_MQTT_ONLY_LOG_PARAMS 8
-#define CF_LOGMODE_UDP 16
-
 typedef enum{
 // Version 0 (header + PPS values + space for MAX! devices)
   CF_USEEEPROM, //Size: 1 byte. 0x96 - read config from EEPROM. Other values - read predefined values from BSB_lan_config
@@ -96,6 +90,8 @@ typedef enum{
 //Maximum version can be 65534 (0xFFFE). In other case initConfigTable() will locked in infinite loop
 //Maximum options count can be 253 for same reason (or must changing uint8_t type to uint16_t)
 // Version 14 (remove fixed device family/variant)
+// Version 15 (control MQTT unit set)
+  CF_MQTT_UNITS, //Size: 1 byte. Unit of measure for MQTT: 0 - Localized, 1 - Home Assistant, 255 - None
   CF_LAST_OPTION //Virtual option. Must be last in enum. Only for internal usage.
 } cf_params;
 
@@ -146,7 +142,7 @@ typedef struct {
   uint8_t version;     // config version which can manage this parameter
   uint8_t category;    // for grouping configuration options (cdt_params)
   uint8_t input_type;  // input type (text, dropdown etc.) 0 - none 1 - text field, 2 - switch, 3 - dropdown, 4 - bitwise (checkboxes)
-  uint8_t var_type;    // variable type (string, integer, float, boolean etc.), could maybe be derived from input_type or vice versa
+  uint8_t var_type;    // variable type (string, integer, float, bool etc.), could maybe be derived from input_type or vice versa
   uint8_t flags;       // options flags: 1 - basic option, 2 - advanced option
   const char* desc;    // pointer to text to be displayed for option - is text length necessary if we just read until NULL?
   uint16_t size;       // data length in EEPROM
@@ -154,6 +150,7 @@ typedef struct {
 
 #define OPT_FL_BASIC 1
 #define OPT_FL_ADVANCED 2
+#define OPT_FL_PASSWORD 4
 
 typedef struct {
   uint8_t id;          // a unique identifier of param Category
@@ -198,7 +195,7 @@ const configuration_struct config[]={
   {CF_TX_PIN,           8, CCAT_BUS,      CPI_TEXT,      CDT_BYTE,           OPT_FL_ADVANCED, CF_TX_PIN_TXT, sizeof(bus_pins[0])},//need reboot
   {CF_NETWORK_TYPE,     12,CCAT_IPV4,     CPI_DROPDOWN,  CDT_BYTE,           OPT_FL_BASIC|OPT_FL_ADVANCED, CF_NETWORK_TYPE_TXT, sizeof(network_type)},// should not need reboot, but crashes if no reboot?
   {CF_WIFI_SSID,        4, CCAT_IPV4,     CPI_TEXT,      CDT_STRING,         OPT_FL_BASIC|OPT_FL_ADVANCED, CF_WIFI_SSID_TXT, sizeof(wifi_ssid)}, //need reboot
-  {CF_WIFI_PASSWORD,    4, CCAT_IPV4,     CPI_TEXT,      CDT_STRING,         OPT_FL_BASIC|OPT_FL_ADVANCED, CF_WIFI_PASSWORD_TXT, sizeof(wifi_pass)},//need reboot
+  {CF_WIFI_PASSWORD,    4, CCAT_IPV4,     CPI_TEXT,      CDT_STRING,         OPT_FL_BASIC|OPT_FL_ADVANCED|OPT_FL_PASSWORD, CF_WIFI_PASSWORD_TXT, sizeof(wifi_pass)},//need reboot
   {CF_DHCP,             2, CCAT_IPV4,     CPI_SWITCH,    CDT_BYTE,           OPT_FL_ADVANCED, CF_DHCP_TXT, sizeof(useDHCP)}, //need reboot
   {CF_IPADDRESS,        2, CCAT_IPV4,     CPI_TEXT,      CDT_IPV4,           OPT_FL_ADVANCED, CF_IPADDRESS_TXT, sizeof(ip_addr)}, //need reboot
   {CF_MASK,             2, CCAT_IPV4,     CPI_TEXT,      CDT_IPV4,           OPT_FL_ADVANCED, CF_MASK_TXT, sizeof(subnet_addr)}, //need reboot
@@ -219,12 +216,13 @@ const configuration_struct config[]={
   {CF_CURRVALUESLIST,   1, CCAT_LOGGING,  CPI_TEXT,      CDT_PROGNRLIST,     OPT_FL_BASIC|OPT_FL_ADVANCED, CF_PROGLIST_TXT, sizeof(log_parameters)},//immediately apply
   {CF_LOGTELEGRAM,      1, CCAT_LOGGING,  CPI_DROPDOWN,  CDT_BYTE,           OPT_FL_ADVANCED, CF_LOGTELEGRAM_TXT, sizeof(logTelegram)},//immediately apply
   {CF_AVERAGESLIST,     1, CCAT_24HAVG,   CPI_TEXT,      CDT_PROGNRLIST,     OPT_FL_BASIC|OPT_FL_ADVANCED, CF_PROGLIST_TXT, sizeof(avg_parameters)},//immediately apply
-  {CF_MQTT_SERVER,      12,CCAT_MQTT,     CPI_TEXT,      CDT_STRING,         OPT_FL_ADVANCED, CF_MQTT_SERVER_TXT, sizeof(mqtt_broker_addr)},//need handler
-  {CF_MQTT_USERNAME,    2, CCAT_MQTT,     CPI_TEXT,      CDT_STRING,         OPT_FL_ADVANCED, CF_MQTT_USERNAME_TXT, sizeof(MQTTUsername)},//immediately apply
-  {CF_MQTT_PASSWORD,    2, CCAT_MQTT,     CPI_TEXT,      CDT_STRING,         OPT_FL_ADVANCED, CF_MQTT_PASSWORD_TXT, sizeof(MQTTPassword)},//immediately apply
+  {CF_MQTT_SERVER,      12,CCAT_MQTT,     CPI_TEXT,      CDT_STRING,         OPT_FL_BASIC|OPT_FL_ADVANCED, CF_MQTT_SERVER_TXT, sizeof(mqtt_broker_addr)},//need handler
+  {CF_MQTT_USERNAME,    2, CCAT_MQTT,     CPI_TEXT,      CDT_STRING,         OPT_FL_BASIC|OPT_FL_ADVANCED, CF_MQTT_USERNAME_TXT, sizeof(MQTTUsername)},//immediately apply
+  {CF_MQTT_PASSWORD,    2, CCAT_MQTT,     CPI_TEXT,      CDT_STRING,         OPT_FL_BASIC|OPT_FL_ADVANCED|OPT_FL_PASSWORD, CF_MQTT_PASSWORD_TXT, sizeof(MQTTPassword)},//immediately apply
   {CF_MQTT_DEVICE,      2, CCAT_MQTT,     CPI_TEXT,      CDT_STRING,         OPT_FL_ADVANCED, CF_MQTT_DEVICE_TXT, sizeof(MQTTDeviceID)}, //immediately apply
   {CF_MQTT_TOPIC,       2, CCAT_MQTT,     CPI_TEXT,      CDT_STRING,         OPT_FL_ADVANCED, CF_MQTT_TOPIC_TXT, sizeof(MQTTTopicPrefix)},//immediately apply
   {CF_MQTT,             2, CCAT_MQTT,     CPI_DROPDOWN,  CDT_BYTE,           OPT_FL_ADVANCED, CF_USE_TXT, sizeof(mqtt_mode)},//need handler
+  {CF_MQTT_UNITS,      15, CCAT_MQTT,     CPI_DROPDOWN,  CDT_BYTE,           OPT_FL_ADVANCED, CF_MQTT_UNITS_TXT, sizeof(mqtt_unit_set)},//immediately apply
   {CF_ONEWIREBUS,       2, CCAT_ONEWIREBUS,CPI_TEXT,     CDT_INT8,           OPT_FL_ADVANCED, CF_PINS_TXT, sizeof(One_Wire_Pin)}, //need reboot.
 //bus and pins: DHT_Pins
   {CF_DHTBUS,           2, CCAT_DHTBUS,   CPI_TEXT,      CDT_DHTBUS,         OPT_FL_ADVANCED, CF_PINS_TXT, sizeof(DHT_Pins)}, //immediately apply

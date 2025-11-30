@@ -10,7 +10,8 @@ You can click on each category and will get a list of corresponding parameters. 
 ## Using BSB-LAN's URL commands
 
 Most of BSB-LAN's functionality can be controlled using URL commands. These are useful or even necessary when connecting BSB-LAN to a [home automation system](homeautomation.md), but also provide access to functions not directly accessible via the web-interface.  
-URL commands are called right after BSB-LAN's hostname and an (optional) passkey. So to get a list of categories, one would have to open the URL `http://bsb-lan.local/K` (or `http://bsb-lan.local/1234/K` if the passkey `1234` is in use).
+URL commands are called right after BSB-LAN's hostname and an (optional) passkey. So to get a list of categories, one would have to open the URL `http://bsb-lan.local/K` (or `http://bsb-lan.local/1234/K` if the passkey `1234` is in use).  
+The parameters of the URL commands are referred to as `<x>`, `<y>` or `<addr>` etc. You have to completely replace these placeholders with the values that you want to use instead. For example, to display all parameters of category 1, you would have to call the URL command `/K1`. 
 
 ### Querying and setting parameters
 <style>
@@ -73,7 +74,7 @@ table th:nth-of-type(2) {
 
 |URL command|Functionality|
 |:----------|:------------|
-|`/E<x>`    |Displays parameter options of parameter `<x>`. Only available for option-type parameters such as data types `VT_ENUM`, `VT_CUSTOM_ENUM`, `VT_BITS` and `VT_CUSTOM_BITS`.|
+|`/E<x>`    |Displays parameter options of parameter `<x>`. Only available for option-type parameters such as data types `VT_ENUM`, `VT_CUSTOM_ENUM`, `VT_BITS` and `VT_CUSTOM_BIT`.|
 |`/R<x>`    |Query default setting of parameter `<x>`|
 
 ### GPIO control
@@ -82,19 +83,24 @@ table th:nth-of-type(2) {
 |:----------|:------------|
 |`/G<x>`    |Displays the actual state of GPIO pin `<x>`|
 |`/G<x>=<y>`|Set GPIO pin `<x>` to HIGH (`<y>` = `1`) or LOW (`<y>` = `0`)
+|`/G<x>,I`  |Set GPIO pin `<x>` to ***Input*** direction. Only use this if you have sensors attached to a GPIO that you do not read through other BSB-LAN functions.
 
 ### JSON interface
+
+**For a complete structure of the JSON API, please see [here for the OpenAPI documentation](https://editor.swagger.io/?url=https://raw.githubusercontent.com/fredlcore/bsb_lan/master/openapi.yaml).**
 
 |URL command|Functionality|
 |:----------|:------------|
 |`/JQ=<x>,<y>,<z>`|Query parameters `<x>`, `<y>` and `<z>` and return a JSON structure|
 |`/JQ`      |Query parameters based on a received JSON structure via HTTP POST|  
-|`/JK=<x>`  |Query all parameters of category `<x>`|
-|`/JS`      |Set parameters based on a received JSON structure via HTTP
+|`/JS`      |Set parameters based on a received JSON structure via HTTP POST|
 |`/JR<x>`   |Query default value of parameter `<x>` and return a JSON structure|
-|`/JK=ALL`  |Dump ranges for all available categories as JSON structure|
-|`/JC=<x>,<y>,<z>`|Dump possible values for parameters `<x>`, `<y>` and `<z>` for option-type parameters. Same JSON structure as `/JK=<x>`.|
-|`/JB`      |Backup of all writeable parameters in a JSON structure that can be used to write back using `/JS`|
+|`/JK=ALL`  |Dump parameter ranges for all available categories as JSON structure|
+|`/JK=<x>`  |Dump the parameter structure for all parameters of category `<x>`|
+|`/JC=<x>,<y>,<z>`|Dump the parameter structure for parameters `<x>`, `<y>` and `<z>`. Same JSON structure as `/JK=<x>`.|
+|`/JC       |Dump the parameter structure for a parameter list received as a JSON structure via HTTP POST.|
+|`/JB`      |Backup of all writeable parameters received as a JSON structure that can be used to restore using `/JS`.|
+|`/JB!<addr>`|Backup of all writeable parameters from controller at destination address `<addr>` in a JSON structure that can be used to write back using `/JS`. |
 |`/JL`      |Creates a JSON structure of BSB-LAN's configuration settings`|
 |`/JW`      |Writes configuration settings based on a JSON structure created by `/JL`|   
 |`/JI`      |Dump runtime information of BSB-LAN as JSON structure`|
@@ -107,7 +113,8 @@ table th:nth-of-type(2) {
 |`/M<x>!<y>`|Send (`<x>=1`) or revoke (`<x>=0`) MQTT auto-discovery messages for all parameters from controller at destination address `<y>`.|
 |`/N`       |Reset and reboot microcontroller (takes approx. 15 seconds)|
 |`/NE`      |Erase EEPROM and reboot the microcontroller. All configuration settings will subsequently be read from configuration file until set and saved again in the web-interface to be written to EEPROM.|
-|`/QD`      |Dump parameter structure from heating system| 
+|`/Q`       |Dump parameter structure from heating system|
+|`/QDB`     |Queries the heating system for device-specific parameters and activates these until reboot. Categories do not apply, you have know the parameter numbers you want to query and access them directy (e.g. /0-9999).  This is not a replacement for generating a proper device-specific parameter list as it only contains few parameter types which we know for certain how they work and no harm can be done (mostly read-only status temperatures). However, these can be helpful for heating technicians which want to monitor on the spot the behavior of a random heating system without the need to create and upload a device-specific parameter list.|
 |`/W`       |With a preceding `/W` the URL commands `C`, `S` and `Q` return data without HTML header and footer (e.g.:  `/WC` or `/WS<x>=<y!z>`).|
   
 ---

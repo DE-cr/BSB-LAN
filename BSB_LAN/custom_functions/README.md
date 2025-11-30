@@ -7,10 +7,7 @@ BSB-LAN allows to add custom functions through the following files:
 `BSB_LAN_custom.h` -> This file is called with every iteration of the `loop()` function.  
   
 In this folder, we collect scripts which add a certain functionality that is too specific to be added to the core functionality of BSB-LAN, but can be added through BSB-LAN's custom functions scripts.  
-To use these scripts, you have to do two things:  
-1. Copy the files of the example you want to use to BSB-LAN's main directory (where also `BSB_LAN.ino` and `BSB_LAN_config.h` can be found).
-2. Enable the CUSTOM_COMMANDS definement by removing the to leading slashes at the beginning of the line so that it looks like this:  
-`#define CUSTOM_COMMANDS`
+To use these scripts, you have to copy the files of the example you want to use to BSB-LAN's main directory (where also `BSB_LAN.ino` and `BSB_LAN_config.h` can be found).
 
 Theoretically, you can use several of these custom functions at the same time, and sometimes it's as easy as just copy-pasting each code segment one after the other for each file. But do take note that this is similar to writing code for BSB-LAN itself, so be aware of what you are doing.
 **Please understand that we cannot give any individual support in case of errors or problems!**
@@ -38,6 +35,10 @@ This script takes the readings of DS18B20 sensors and writes them to the custom 
 ## Modbus Interface
 
 This set of scripts enable BSB-LAN to be accessed via Modbus. Parameters can be read and written. However, take note that no data type conversion takes place in this script, so only unsigned 16-bit integer values will be transmitted correctly. All other kinds of data types will have to be encoded/decoded accordingly. If you can live with sending/receiving temperature values with their decimal places removed, you can use this script for example to set setpoint temperatures, query outside temperatures or change operation modes without having to worry about conversions.
+
+## Push notifications for changed parameters
+
+This custom function monitors selected parameters (defined in `pushParameters`) and sends a push notification once a change occurs. This can be used to send an alarm if the error or maintenance code changes, for example. This script works with pushsafer.com, but it should be easy to adapt it to other services by adjusting the variables below. There is one hard-coded check in `BSB_LAN_custom.h` that checks for the result string containing `success` or `error` which might have to  be adjusted for the debug messages to work, but it won't do any harm to leave it as it is if debug output is not needed.
 
 ## Send NTP time to heater
 

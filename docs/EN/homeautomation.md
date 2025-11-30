@@ -14,7 +14,7 @@ For some systems, specific modules exist that can be used to access BSB-LAN seam
 [](){#HomeAssistant}
 ### Home Assistant
 
-While the official plugin no longer works, the MQTT approach (see below) works well with Home Assistant, including the auto-discovery feature.  
+There is the official [integration](https://www.home-assistant.io/integrations/bsblan/) and the MQTT approach (see below). Both works well with Home Assistant, including the auto-discovery feature.  
 Here is a link to a [video in the BSB-LAN YouTube channel](https://youtu.be/DbHEiWm5nBs) that shows how to set up BSB-LAN in Home Assistant using the auto-discovery feature of Home Assistant.
 
 For further details of the implementation, you may also refer to these tutorials:
@@ -93,7 +93,8 @@ In BSB-LAN, you need to make or enable at least the following configurations:
 - Set **MQTT Usage** to **plain text**.
 - Set **MQTT Broker Server** to the hostname of your MQTT broker (such as the mosquitto server).
 
-If your home automation system supports MQTT auto-discovery (as is the case with Home Assistant), you can call URL command `/M1!<x>` and BSB-LAN will send auto-discovery messages for **all available parameters** from device ID `<x>` to the MQTT broker and thus to the home automation system. You may have to clean up afterwards or send a removal message for all these parameters using URL command `/M0!<x>` if you don't want to use this feature anymore.  
+If your home automation system supports MQTT auto-discovery (as is the case with Home Assistant), you can call URL command `/M1!<x>` and BSB-LAN will send auto-discovery messages for **all available parameters** from device ID `<x>` to the MQTT broker and thus to the home automation system. Please take note that if you don't have write-enabled parameters in BSB-LAN, all parameters will be reported as read-only parameters in Home Assistant. If you later change that setting in BSB-LAN, you have to start the auto-discovery process again.  
+You may have to clean up afterwards or send a removal message for all these parameters using URL command `/M0!<x>` if you don't want to use this feature anymore.  
 
 Otherwise, if you want to set up your own connection details, the topic structure of BSB-LAN is as follows:  
 `<BSB-LAN MQTT Topic>/<device ID>/<category no.>/<parameter no.>`  

@@ -2,14 +2,41 @@
 
 ##Current Master##
 
+- **ATTENTION**: Potential wrong assignment of data type for `VT_HOURS_WORD` in the past: If you have problems setting a parameter with data type `VT_HOURS_WORD`, then change it to `VT_HOURS_WORD_N`. It _should_ only affect parameter 7040, but let me know if others are also affected as well.
+- Custom code can now also react to broadcast messages (beyond already existing MQTT functionality) by using BSB_LAN_custom_GetMessage.h
+- New parameters 10196 to 10199 for displaying numerical error messages that should work on almost all devices.
+- New configuration variable `mqtt_unit_set` defines how measurement units are sent via MQTT when using Rich JSON or auto-discovery: The default CF_MQTT_UNIT_LOCALIZED will send unit strings in the configured language, exactly as shown in the BSB-LAN web interface. CF_MQTT_UNIT_HOMEASSISTANT sends unit strings in the format used by Home Assistant to avoid warning messages about unknown unit strings. CF_MQTT_UNIT_NONE will send MQTT messags with no unit text. This setting only applies to MQTT and does not affect the web interface which will always show units in the localized language. When selecting Home Assistant as the unit format, the 'device_class' string will be sent for compatible parameters during MQTT auto-discovery so that automations can correctly identify sensor classes.
+- Configuration variable `replaceDisabled` defines the value for a deactivated/inactive status in parameters with numerical values. Defaults to `---`; Home Assistant expects `None` here, others might expect `0`. Keep in mind that both is inexact information, but depending on the circumstances, this might be the closest you would get if otherwise the external systems would not accept the data coming from BSB-LAN.
+- Added functionality to monitor parameter changes and send out push notificatons upon changes. See `custom_functions/Push_notifications_for_changed_parameters`. Currently works with pushsafer.com, but adaptation to other services should be easy.
+- If you use the Arduino IDE 1.8.18 on Linux ARM, please take note that ESP32 framework version 3.0.7 is the last framework version that is currently running on these systems. [See our Wiki](https://github.com/fredlcore/BSB-LAN/wiki/Installing-BSB%E2%80%90LAN-using-arduino%E2%80%90cli) for using `arduino-cli` as a command-line-based alternative that brings the most recent frameworks to ARM and other architectures
+
+##Version 5.0##
+16.03.2025
+
 - **ATTENTION: BREAKING CHANGE!** Streamlined topic structure for MQTT. New strucuture adds `/status` for querying a parameter, `/set` for SETting a parameter, `/inf` for sending data as INF telegram and `/poll` to force BSB-LAN to send an update of that parameter value to the broker. If you are using MQTT auto-discovery, ideally, calling `/M1` should update these changes. However, if you are using your own configurations, you'll have to make adjustments here.
 - **ATTENTION: BREAKING CHANGE!** When using JSON settings for MQTT, previously all messages were written to the `BSB-LAN/json` and thus basically immediately overwritten when logging several parameters. Now this setting only determines the format (and not format and topic) of the data that is written into `/status` of each parameter. For auto-discovery, plain text remains the only valid choice.
 - **ATTENTION: BREAKING CHANGE** The acknowledgement message sent by BSB-LAN to the `MQTT` topic has been removed. Instead, QoS for publishing messages has been set to level 1.
 - **ATTENTION: BREAKING CHANGE:** Log configuration values have changed. However, only users that have logged to UDP are affected and will have to adjust their settings.
-- Added setting to only publish log parameters to MQTT. Forcing MQTT updates via /poll topic are still possible.
+- **ATTENTION: BREAKING CHANGE:** Removed WiFiSPI support to use WiFi on the Arduino Due.
+- **ATTENTION: BREAKING CHANGE:** Removed the need to add `#define CUSTOM_COMMANDS` in order to run code as part of `BSB_LAN_custom*.h`. Check these files for old/unused code that might inadvertently get executed when updating to the new version. If you want to enable/disable custom code quickly, add a new variable in `BSB_LAN_config.h` and include that as a condition in your code.
+- **ATTENTION:** `/JK=ALL` now lists all categories of all devices in LPB systems with more than one device. Use `dev_fam` (device family), `dev_var` (device variant), `dev_id` (destination device ID) and `dev_name` (device model) elements to sort and identify which category applies to the current destination device. 
+- **ATTENTION** Users that have a parameter with data type `VT_CURRENT1000` in their `BSB_LAN_custom_defs.h`: Please change it to `VT_CURRENT` unless(!) you have BSB-LAN connected to an LMU64/LMU74 via an OCI420. Only in that case, keep the parameter's data type at `VT_CURRENT1000`. 
+- Added new URL command /QDB - this queries BSB/LPB heating systems for device-specific parameters (for safety reasons, only read-only parameters are added) and activates these until reboot. All these parameters are in category 0, generically named "Parameters". Likewise, the name of all parameters is "Parameter". You have to identify their meaning by their parameter number. 
+This is not a replacement for generating a proper device-specific parameter list as it only contains few parameter types which we know for certain how they work and no harm can be done (mostly read-only status temperatures). However, these can be helpful for heating technicians which want to monitor on the spot the behavior of a random heating system without the need to create a device-specific parameter list. 
+- Added possibility to set the room setpoint temperature with MAX! thermostats. Specific variables `max_cul_rf_addr`, `max_flags`, `max_group_id` and `max_temp_mode` are pre-defined in `BSB_LAN.ino` but can be overwritten in `BSB_LAN_config.h` if necessary. 
+- Added setting to only publish log parameters to MQTT. Forcing MQTT updates via /poll topic are still possible. This setting also applies to MQTT auto-discovery, i.e. only log parameters will be discovered!
+- Moved MQTT username and password configuration to basic configuration view in webinterface
 - Added state_class for non cumulative sensors in MQTT auto-discovery
 - Updated the room unit emulation in `custom_functions` to work with version 4.x.
+- Disabling parameters can now be done both with an empty value as well as by sending `---`. Sending an empty value is still possible, but is depracated and will be removed at some later time.
+- BSB-LAN now scans the BSB/LPB bus during startup (and later periodically, if not connected to heating system) for other devices on the bus. This significantly reduces access times later on for systems with more than one device on the bus.
+- `/JQ` now contains "payload" which contains the raw payload data which can be useful for evaluating non-standard commands.
+- Workaround for intermittent crashes on PoE- or barrel-connector-powered Olimex microcontrollers
+- New version from new repo of PubSubClient. Hopefully with this version, disconnects will be greatly reduced.
 - Bugfix for VT_ENERGY, added new data type VT_ENERGY10 and VT_ENERGY10_N
+- Numerous bugfixes, especially for the JSON API
+- French and German translations of the manual added, special thanks to GitHub user @plauwers for this!
+- This release has been supported by the following sponsors: Sven Rutten
 
 ##Version 4.1##
 **06.11.2024**  
@@ -20,19 +47,20 @@
 - **ATTENTION:** Change of configuration options results in new EEPROM layout, therefore EEPROM will be reinitialized based on configuration of `BSB_LAN_config.h`.
 - MQTT auto-discovery now works for all devices, not only device ID 0. Use `/M1!<x>` or `/M0!<x>` to create/remove entities for device ID `<x>`.
 - Changed MQTT auto-discovery messages' flag to "retain" so that parameters remain available after reboot of Home Assistant.
+- Bugfix for reading status of GPIO pin using `/G`. Also reintroduced `/G<x>,I` to dedicately set a GPIO as input.
 
 ##Version 4.0##
 **01.11.2024**  
 
-- **ATTENTION: BREAKING CHANGE!** Room temperature parameter 10000, 10001 and 10002 must now have the additional flag `FL_SPECIAL_INF`, otherwise setting temperature will not work!
+- **ATTENTION: BREAKING CHANGE!** Room temperature parameter 10000, 10001 and 10002 must now have the additional flag `FL_SPECIAL_INF`, otherwise setting temperature will not work! See `BSB_LAN_custom_defs.h.default` and search for `FL_SPECIAL_INF`to find the right line and use that as an example.
 - **ATTENTION: BREAKING CHANGE!** Outside temperature simulation parameter 10017 must have `FL_SPECIAL_INF` flag removed, otherwise setting temperature will not work!
-- **ATTENTION: BREAKING CHANGE!** Room temperature parameter 10000, 10001 and 10002 for Weishaupt heaters (device families 49, 50, 51 and 59) must now have `FL_SPECIAL_INF` flag removd, otherwise setting temperature will not work!
+- **ATTENTION: BREAKING CHANGE!** Room temperature parameter 10000, 10001 and 10002 for Weishaupt heaters (device families 49, 50, 51 and 59) must now have `FL_SPECIAL_INF` flag removed, otherwise setting temperature will not work!
 - **ATTENTION: BREAKING CHANGE!** URL commands `/U` (dislpay user-defined variables) and `/X` (display MAX! values) have been removed as these values can now be accessed via parameters 20000++
 - **ATTENTION: BREAKING CHANGE!** PPS time program parameters (15050-15091) have been streamlined with BSB/LPB time program parameters, resulting in only one parameter per day (instead of six), covering three switch points (start and end) per parameter.
 - **ATTENTION:** For ESP32, BSB-LAN requires ESP32 framework version 3.0.x - please look out for errors or strange behaviour (1-Wire sensors are still not tested) as well as any other kind of strange behaviour/crashes.
 - **ATTENTION:** New configuration options in `BSB_LAN_config.h` - please update your existing configuration files! Web-based configuration will be overwritten with config file settings due to change in EEPROM layout! 
 - **ATTENTION:** New manual URL: https://docs.bsb-lan.de/
-- BUTTONS and `RGT_EMULATION` have been moved from main code to `custom_functions` library. To continue using them, make use of `BSB_LAN_custom_*.h` files and activate `CUSTOM_COMMANDS` definement.
+- BUTTONS and `RGT_EMULATION` have been moved from main code to `custom_functions` library. To continue using them, make use of corresponding `BSB_LAN_custom_*.h` files.
 - Most configuration definements removed from `BSB_LAN_config.h`. Almost all functionality can now be configured without reflashing.
 - BSB-LAN now supports MQTT auto discovery (supported e.g. by Home Assistant). To create devices, call URL command `/M1`, to remove them call `/M0` 
 - **ATTENTION:** MQTT auto discovery creates a general switch for the BSB-LAN device in Home Assistant. This switch will immediately write all parameters with the values stored in Home Assistant. DO NOT USE THIS SWITCH unless you REALLY know what it does!
@@ -282,11 +310,6 @@ Example: `/JC=505,700,701,702,711,1600,1602`
    See `/K40` for the limited commands available for this bus.
    Use setBusType(2) to set to PPS upon boot or `/P2` to switch temporarily.
 - Set GPIOs to input by using `/Gxx,I`
-- Definement `#define CUSTOM_COMMANDS` added.
-   Use this in your configuration to include individual code from `BSB_LAN_custom.h`
-   (needs to be created by you!) which is executed at the end of each main loop.
-   Variables `custom_timer` and `custom_timer_compare` have been added to execute
-   code at arbitrary intervals.
 - Added LogoBloc Unit L-UB 25C device family (95)
 - several new parameters added
 - Bugfix for logging Brennerlaufzeit Stufe 2
@@ -368,7 +391,7 @@ Example: `/JC=505,700,701,702,711,1600,1602`
 ##Version 0.32##
 **18.04.2017**  
 
-- lots of new parameters suppoerted
+- lots of new parameters supported
 - newly designed webinterface allows control over heating system without any additional software or cryptic URL commands. URL commands of course are still available, so no need to change anything when using FHEM etc.
 - German webinterface available with definement `LANG_DE`
 - new URL-command `/LB=x` to log only broadcast messages (x=1) or all bus messages (x=0)

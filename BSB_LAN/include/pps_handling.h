@@ -34,6 +34,10 @@ uint16_t pps_bus_handling(byte *msg) {
         tx_msg[7] = pps_values[PPS_BA];
         break;
       case 6:
+        tx_msg[1] = 0x4C; // Präsenz
+        tx_msg[7] = pps_values[PPS_AW];
+        break;
+      case 7:
       {
         if (pps_values[PPS_AW] == 0) {                 // Set destination temperature (comfort + knob for heating period, otherwise reduced temperature)
           pps_values[PPS_RTZ] = pps_values[PPS_RTA];
@@ -45,11 +49,11 @@ uint16_t pps_bus_handling(byte *msg) {
         tx_msg[7] = pps_values[PPS_RTZ] & 0xFF;
         break;
       }
-      case 7:
+      case 8:
         tx_msg[1] = 0x56;
         tx_msg[7] = 0x00;
         break;
-      case 8:
+      case 9:
       {
         if (pps_time_set == true) {
           bool found = false;
@@ -97,24 +101,20 @@ uint16_t pps_bus_handling(byte *msg) {
         }
       }
 //            break;
-      case 9:
+      case 10:
         tx_msg[1] = 0x08;     // Raumtemperatur Soll
         tx_msg[6] = pps_values[PPS_RTS] >> 8;
         tx_msg[7] = pps_values[PPS_RTS] & 0xFF;
         break;
-      case 10:
+      case 11:
         tx_msg[1] = 0x09;     // Raumtemperatur Abwesenheit Soll
         tx_msg[6] = pps_values[PPS_RTA] >> 8;
         tx_msg[7] = pps_values[PPS_RTA] & 0xFF;
         break;
-      case 11:
+      case 12:
         tx_msg[1] = 0x0B; // Trinkwassertemperatur Soll
         tx_msg[6] = pps_values[PPS_TWS] >> 8;
         tx_msg[7] = pps_values[PPS_TWS] & 0xFF;
-        break;
-      case 12:
-        tx_msg[1] = 0x4C; // Präsenz
-        tx_msg[7] = pps_values[PPS_AW];
         break;
       case 13:
         tx_msg[1] = 0x1E; // Trinkwassertemperatur Reduziert Soll
@@ -244,10 +244,12 @@ uint16_t pps_bus_handling(byte *msg) {
         break;
     }
     msg_cycle++;
-    if (msg_cycle > 25 || (pps_values[PPS_QTP] == 0x52 && msg_cycle > 5)) {      // QAA50 sends fewer parameters
+    if (msg_cycle > 25 || (pps_values[PPS_QTP] == 0x52 && msg_cycle > 6)) {      // QAA50 sends fewer parameters
+// printFmtToDebug("Resetting msg_cycle from %d to 0", msg_cycle);
       msg_cycle = 0;
     }
     if (saved_msg_cycle > 0) {
+// printFmtToDebug("Restoring msg_cycle to %d", saved_msg_cycle);
       msg_cycle = saved_msg_cycle;
       saved_msg_cycle = 0;
     }
@@ -279,13 +281,16 @@ uint16_t pps_bus_handling(byte *msg) {
   } else {    // parse heating system data
 
     if (((msg[0] & 0x0F) == 0x0E && QAA_TYPE == 0x43) || msg[0] == 0x1E) {   // Heater requests information from the QAA (i.e. BSB-LAN) with telegram type 0x1E (or lower nibble 0x0E for RVD130)
-      saved_msg_cycle = msg_cycle;
+      if (saved_msg_cycle == 0) {
+        saved_msg_cycle = msg_cycle;
+// printFmtToDebug("Saving msg_cycle %d\r\n", saved_msg_cycle);
+      }
       switch (msg[1]) {
-        case 0x08: msg_cycle = 9; break;
-        case 0x09: msg_cycle = 10; break;
-        case 0x0B: msg_cycle = 11; break;
+        case 0x08: msg_cycle = 10; break;
+        case 0x09: msg_cycle = 11; break;
+        case 0x0B: msg_cycle = 12; break;
         case 0x38: msg_cycle = 0; break;
-        case 0x3A: msg_cycle = 26; break;
+        case 0x3A: msg_cycle = 27; break;
         case 0x48: msg_cycle = 1; break;
         case 0x49: msg_cycle = 5; break;
         case 0x4C: msg_cycle = 12; break;
@@ -327,15 +332,15 @@ ich mir da nicht)
 */
 
       }
-    } else if ((msg[0] & 0x0F) == 0x0D) {    // Info-Telegramme von der Therme (0x1D)
+    } else if (((msg[0] & 0x0F) == 0x0D && QAA_TYPE == 0x43) || msg[0] == 0x1D) {    // Info-Telegramme von der Therme (0x1D)
 
 //            uint8_t pps_offset = (msg[0] == 0x17 && pps_write != 1);
 //      uint8_t pps_offset = 0;
 //            uint16_t temp = (msg[6+pps_offset] << 8) + msg[7+pps_offset];
       uint16_t temp = (msg[6] << 8) + msg[7];
-      uint16_t i = sizeof(cmdtbl)/sizeof(cmdtbl[0]) - 1;
-      while (i > 0 && cmdtbl[i].line >= 15000) {
-        uint32_t cmd = cmdtbl[i].cmd;
+      uint16_t i = active_cmdtbl_size - 1;
+      while (i > 0 && active_cmdtbl[i].line >= 15000) {
+        uint32_t cmd = active_cmdtbl[i].cmd;
         cmd = (cmd & 0x00FF0000) >> 16;
 //              if (cmd == msg[1+pps_offset]) {
         if (cmd == msg[1]) {
@@ -343,11 +348,18 @@ ich mir da nicht)
         }
         i--;
       }
-      uint16_t flags=cmdtbl[i].flags;
+      uint32_t flags=active_cmdtbl[i].flags;
       if (programIsreadOnly(flags) || pps_write != 1 || (msg[1] == 0x79 && pps_time_received == false)) {
         switch (msg[1]) {
-          case 0x4F: log_now = setPPS(PPS_CON, msg[7]); saved_msg_cycle = msg_cycle; msg_cycle = 0; break;  // Gerät an der Therme angemeldet? 0 = ja, 1 = nein
-
+          case 0x4F: {
+            log_now = setPPS(PPS_CON, msg[7]); 
+            if (saved_msg_cycle == 0) {
+              saved_msg_cycle = msg_cycle;
+// printFmtToDebug("Responding to 0x4F INF, saving msg_cycle %d\r\n", saved_msg_cycle);
+            }
+            msg_cycle = 0;
+            break;  // Gerät an der Therme angemeldet? 0 = ja, 1 = nein
+          }
           case 0x08: pps_values[PPS_RTS] = temp; break; // Raumtemperatur Soll
           case 0x09: pps_values[PPS_RTA] = temp; break; // Raumtemperatur Abwesenheit Soll
           case 0x0B: pps_values[PPS_TWS] = temp; break; // Trinkwassertemperatur Soll

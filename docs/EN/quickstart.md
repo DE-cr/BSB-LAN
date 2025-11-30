@@ -14,7 +14,8 @@ These quickstart instructions are for users who are familiar with installing and
     1. *Olimex ESP32-EVB* for the ESP32-based Olimex EVB .
     1. *Olimex ESP32-POE-ISO* for the ESP32-based Olimex POE ISO
     1. *Arduino Due (Programming Port)* for the Arduino Due. **Do not use the Native USB Port here**!
-1. Again, go to ***Tools/Board*** and select the proper upload speed (up to 460800 for ESP32, 115200 for Arduino Due).
+1. Now, go to ***Tools*** and select the port that your microcontroller is connected to.
+1. Again, go to ***Tools*** and select the proper upload speed (up to 460800 for ESP32, 115200 for Arduino Due).
 1. For ESP32-based microcontrollers, again, go to ***Tools/Partition Scheme*** and select "Minimal SPIFFS" or for partition scheme (**do not confuse this with the similar "Minimal" partition scheme** which is different and not working in our case). **If you don't set the correct parition scheme, the firmware will not fit into the ESP32!**
 1. Go to ***File/Open*** and navigate to the BSB_LAN folder and double-click on `BSB_LAN.ino`. The project will open.
 1. Click on the tab with the filename `BSB_LAN_config.h` and configure at least the following:
@@ -27,7 +28,7 @@ These quickstart instructions are for users who are familiar with installing and
         1. `byte subnet_addr[4] = {255,255,255,0};`
         1. `char wifi_ssid[32] = "Your_Wifi_network_name";`
         1. `char wifi_pass[32] = "Your_WiFi_network_password";`
-1. Now go to ***Sketch/Upload*** and upload the BSB-LAN software to the microcontroller.
+1. Now go to ***Sketch/Upload*** and upload the BSB-LAN software to the microcontroller. For ESP32 microcontrollers, the message "Hard resetting via RTS pin..." is **not** an error message, but means that the upload was successful and the ESP32 is now restarting.
 1. Unplug the microcontroller and turn off your heating system. Locate the BSB/LPB/PPS connectors. You may have to open your heating system for that. ***Do all this at your own risk!***
 1. Now plug the BSB-LAN adapter onto the microcontroller and connect the `+` screw connector to the `CL+` (BSB), `DB` (LPB) or `A6` (PPS, different connector names are possible) connector, and the `-` screw connector to the `CL-` (BSB), `MB` (LPB) or `M` (PPS) connector.
 1. Power on the microcontroller via the USB port or via PoE (Olimex POE-ISO only). Then power on the heating system. The red LED of the BSB-LAN adapter should turn on. It should flicker occasionally.
@@ -43,4 +44,5 @@ Please make sure you check **every entry** in the [Troubleshooting-Section](trou
 
 Once you access BSB-LAN for the first time, you will see that only very few parameters are shown on the device’s web interface. This is because each model of the Siemens controller built into your heating system supports a different set of parameters. Previously, I provided a list of parameters collected from all different kinds of heating systems, but it turned out that this list was ambiguous or even contained errors that we couldn’t fix reliably. This list is still available in release version 2.2.x of BSB-LAN and can be copied from there if needed.  
 However, it is not advisable to do so because the said ambiguities and errors pose too great a risk of misconfiguring the heating system. Instead, it is recommended to click on the "**Device-specific parameter list**" button in BSB-LAN's menu and send the generated list to Frederik (bsb(ät)code-it.de). From this file, a parameter list can be generated that fits exactly the controller of your heating system. Unfortunately, this process cannot be automated yet, but at least it has to be done just once. These raw data do not contain any settings or other kinds of personal data, just the parameter structure of the heating system.  
-It’s in my own interest to create and return these parameter lists without any delay, but I ask for your understanding if it takes a bit longer due to work or family matters.
+It’s in my own interest to create and return these parameter lists without any delay, but I ask for your understanding if it takes a bit longer due to work or family matters.  
+Once you have received the file (or taken the one from release version 2.2.x), you just use it to replace the file of the same name in the `BSB_LAN`folder and repeat the flashing steps as detailed above.

@@ -46,7 +46,7 @@ void registerConfigVariable(uint8_t id, byte *ptr) {
 
 //remove variable address of selected config option from config parameters address table
 void unregisterConfigVariable(uint8_t id) {
-  options[id].option_address = NULL;
+  options[id].option_address = nullptr;
 }
 
 byte *getConfigVariableAddress(uint8_t id) {
@@ -102,7 +102,8 @@ bool writeToEEPROM(uint8_t id) {
       EEPROMwasChanged = true;
     }
   }
-#if defined(ESP32)
+
+#if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
   if (EEPROMwasChanged)
     EEPROM.commit();
 #endif

@@ -124,6 +124,14 @@ void webPrintSite() {
   printlnToWebClient("<p>");
   printToWebClient("BSB-LAN, Version ");
   printToWebClient(BSB_VERSION);
+  if (enable_ota_update) {
+    printToWebClient(" / <a id=\"ota_link\" target=\"_new\">OTA</a>");
+    printToWebClient("<script>");
+    printToWebClient("var port = 8080; var path = '/';");
+    printToWebClient("var proto = (location.protocol === 'https' ? 'https' : 'http');");
+    printToWebClient("document.getElementById('ota_link').href = proto + '://' + location.hostname + ':' + port + path;");
+    printToWebClient("</script>");
+  }
 #if defined(DEFAULT_DEFS)
   if (bus_type < 2) {
     printlnToWebClient("<p><br><b>" MENU_TEXT_SDF "</b><br><br>");
@@ -136,23 +144,25 @@ void webPrintSite() {
   if (enable_version_check) {
     printlnToWebClient("<BR><BR>" MENU_TEXT_NVS "...<BR>");
     flushToWebClient();
-    httpclient.connect("bsb-lan.de", 80);
-    httpclient.println("GET /bsb-version.h\r\n");
+    ComClient *httpclient = new ComClient();
+    httpclient->connect("bsb-lan.de", 80);
+    httpclient->println("GET /bsb-version.h\r\n");
 
     unsigned long timeout = millis();
-    while (millis() - timeout < 3000 && !httpclient.available()) {
+    while (millis() - timeout < 3000 && !httpclient->available()) {
+      delay(10);
     }
 
     int major = -1;
     int minor = -1;
     int patch = -1;
     char version_number[15] = { 0 };
-    while (httpclient.available()) {
-      char c = httpclient.read();
+    while (httpclient->available()) {
+      char c = httpclient->read();
       if (c == '\"') {
         int index = 0;
         do {
-          c = httpclient.read();
+          c = httpclient->read();
           if (index >= 14) continue;  // don't write beyond version_number[]!
           version_number[index] = c;
           index++;
@@ -169,7 +179,9 @@ void webPrintSite() {
         }
       }
     }
-    httpclient.stop();
+    httpclient->stop();
+    delete httpclient;
+    httpclient = nullptr;
     if ((major > atoi(MAJOR)) || (major == atoi(MAJOR) && minor > atoi(MINOR)) || (major == atoi(MAJOR) && minor == atoi(MINOR) && patch > atoi(PATCH))) {
       printToWebClient(MENU_TEXT_NVA ": ");
       printFmtToWebClient("<A HREF=\"https://github.com/fredlcore/BSB-LAN/archive/master.zip\">%d.%d.%d</A><BR>\r\n", major, minor, patch);
